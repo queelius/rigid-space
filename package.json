@@ -1,0 +1,25 @@
+{
+  "name": "rigid-space",
+  "version": "1.0.0",
+  "description": "Star Control 2-inspired space sandbox with rigid body physics. Fork of space-engine-ts concepts with rigid body foundation (Rapier/Box2D).",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "test": "vitest run"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "@dimforge/rapier2d-compat": "^0.19.3",
+    "pixi.js": "^8.17.1"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "typescript": "^5.9.3",
+    "vite": "^8.0.0",
+    "vitest": "^4.1.0"
+  }
+}
