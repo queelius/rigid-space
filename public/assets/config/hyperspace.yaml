@@ -1,0 +1,26 @@
+physics:
+  slipstream_drag: 0.01
+  void_drag: 5.0
+  slipstream_radius: 50
+  repulsive_G: -100
+  well_attraction_radius: 30
+  well_attraction_G: 200
+
+entry:
+  speed_threshold_fraction: 0.8
+  min_distance_from_star: 3000
+  fuel_cost: 5
+
+coordinate_scale: 20
+
+structures:
+  - name: "The Axiom"
+    position: [800, 400]
+    asset: object_ancient_axiom.png
+    npc_name: "Vex-Undral"
+    npc_personality: "speaks in mathematical abstractions, references deeper layers of reality, barely acknowledges your presence as a lower-dimensional being"
+  - name: "The Recursion"
+    position: [200, 600]
+    asset: object_ancient_recursion.png
+    npc_name: "Ix-Tesseral"
+    npc_personality: "obsessed with nested dimensions, speaks of the layers beneath layers, barely acknowledges your existence"

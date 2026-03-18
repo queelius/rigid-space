@@ -1,0 +1,115 @@
+# Proximity ambient sounds — play continuously when near an object type
+proximity:
+  blackhole:
+    # Range as factor of computed radius: audible within 8x radius, full at 2x
+    min_range_factor: 2.0    # below 2x radius: full intensity (danger zone)
+    max_range_factor: 8.0    # beyond 8x radius: silence
+    range_fallback: 2000     # absolute fallback if radius unknown
+    falloff: 3
+    max_volume: 0.4
+    layers:
+      - waveform: sawtooth
+        base_freq: 20
+        freq_range: 15
+        pulse_hz: 2
+      - waveform: square
+        base_freq: 60
+        freq_range: 45
+        pulse_hz: 2
+    mass_scale:
+      freq_mult: -0.0001
+      vol_mult: 0.0001
+    # Danger zone: inside min_range_factor, override with intense sound
+    danger:
+      max_volume: 0.8
+      layers:
+        - waveform: sawtooth
+          base_freq: 15
+          freq_range: 30
+          pulse_hz: 5.0    # frantic
+
+  star:
+    min_range_factor: 1.5    # inside 1.5x radius: INTENSE
+    max_range_factor: 6.0    # audible within 6x radius
+    range_fallback: 1500
+    falloff: 2
+    max_volume: 0.35
+    layers:
+      - waveform: sawtooth
+        base_freq: 45
+        freq_range: 20
+        pulse_hz: 0.3
+      - waveform: square
+        base_freq: 120
+        freq_range: 60
+        pulse_hz: 1.5
+    danger:
+      max_volume: 0.7
+      layers:
+        - waveform: sawtooth
+          base_freq: 25
+          freq_range: 40
+          pulse_hz: 3.0
+
+# One-shot event sounds
+events:
+  BOND_BREAK:
+    type: synthetic
+    waveform: sawtooth
+    freq_start: 800
+    freq_end: 100
+    duration: 0.05
+    volume: 0.4
+    range: 1000
+
+  COLLISION:
+    type: synthetic
+    waveform: sine
+    freq_start: 60
+    freq_end: 20
+    duration: 0.15
+    volume: 0.5
+    range: 1500
+
+  CANNON_FIRE:
+    type: synthetic
+    waveform: square
+    freq_start: 1200
+    freq_end: 100
+    duration: 0.2
+    volume: 0.3
+    range: 2000
+
+  ERUPTION:
+    type: synthetic
+    waveform: sawtooth
+    freq_start: 30
+    freq_end: 25
+    duration: 1.5
+    volume: 0.4
+    range: 3000
+
+  ACCRETION:
+    type: synthetic
+    waveform: sine
+    freq_start: 400
+    freq_end: 20
+    duration: 0.5
+    volume: 0.2
+    range: 3000
+
+  # Example of file-based sound (not used yet, shows the format)
+  # EXPLOSION:
+  #   type: file
+  #   src: assets/sounds/explosion.wav
+  #   volume: 0.8
+  #   range: 2000
+
+# Continuous sounds (thrust, etc)
+continuous:
+  thrust:
+    waveform: sawtooth
+    freq: 80
+    volume: 0.15
+    attack: 0.1   # seconds to fade in
+    release: 0.2  # seconds to fade out

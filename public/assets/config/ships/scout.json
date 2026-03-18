@@ -1,0 +1,15 @@
+{
+  "width": 7,
+  "height": 9,
+  "cells": [
+    [null, null, null, null, null, null, null],
+    [null, null, {"type": 3, "facing": 0}, {"type": 3, "facing": 0}, {"type": 3, "facing": 0}, null, null],
+    [null, {"type": 3, "facing": 0}, {"type": 9, "facing": 2}, {"type": 1, "facing": 0}, {"type": 9, "facing": 2}, {"type": 3, "facing": 0}, null],
+    [null, {"type": 3, "facing": 0}, {"type": 1, "facing": 0}, {"type": 1, "facing": 0}, {"type": 1, "facing": 0}, {"type": 3, "facing": 0}, null],
+    [{"type": 9, "facing": 3}, {"type": 1, "facing": 0}, {"type": 1, "facing": 0}, {"type": 1, "facing": 0}, {"type": 1, "facing": 0}, {"type": 1, "facing": 0}, {"type": 9, "facing": 1}],
+    [null, {"type": 1, "facing": 0}, {"type": 1, "facing": 0}, {"type": 1, "facing": 0}, {"type": 1, "facing": 0}, {"type": 1, "facing": 0}, null],
+    [null, {"type": 1, "facing": 0}, {"type": 1, "facing": 0}, {"type": 10, "facing": 0}, {"type": 1, "facing": 0}, {"type": 1, "facing": 0}, null],
+    [null, null, {"type": 1, "facing": 0}, {"type": 1, "facing": 0}, {"type": 1, "facing": 0}, null, null],
+    [null, null, null, {"type": 9, "facing": 0}, null, null, null]
+  ]
+}

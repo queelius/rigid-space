@@ -1,0 +1,39 @@
+planet:
+  spin_rate: [0.3, 1.0]   # rad/s — visible rotation. Real planets spin fast (Earth = 0.0000727 rad/s but game time is compressed)
+  layers:
+    - material: IRON
+      radius_fraction: 0.3
+    - material: ROCK
+      radius_fraction: 0.7
+    - material: surface    # uses the planet's surface type
+      radius_fraction: 1.0
+  volcano:
+    count: [1, 2]          # min, max random range
+    hill_width: 3
+    tip_type: EXPLOSIVE
+    eruption:
+      interval: [20, 60]
+      particle_count: [5, 10]
+      particle_type: ROCK
+      speed: [100, 300]
+      spread: 0.6
+      heat: [3000, 8000]
+      mass: [2, 7]
+
+asteroid:
+  fill_tiers:
+    - distance_fraction: 0.5
+      probability: 0.9
+    - distance_fraction: 0.8
+      probability: 0.7
+    - distance_fraction: 1.0
+      probability: 0.3
+  iron_fraction: 0.2
+
+station:
+  size: 9
+  patterns: [cross, ring]
+  ring_radius: 3
+  center_type: CRYSTAL
+  arm_type: IRON
+  accent_type: CRYSTAL

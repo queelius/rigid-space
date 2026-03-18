@@ -1,0 +1,107 @@
+# Named star system configurations
+# Override default procgen with specific properties for storyline systems
+
+systems:
+  sol_prime:
+    name: "Sol Prime"
+    central_body:
+      name: "Sol"
+      type: EXOTIC
+      mass: 350000
+      heat: 7000000
+      sound_override:
+        max_volume: 0.4
+    quests:
+      - id: collect_iron
+        title: "Iron Harvest"
+        description: "Collect 5 iron from asteroids"
+        type: collect
+        target: IRON
+        quantity: 5
+        reward_credits: 100
+      - id: visit_void
+        title: "Into the Void"
+        description: "Visit the Void Maw system"
+        type: visit
+        target: void_maw
+        quantity: 1
+        reward_credits: 500
+
+  alpha_centauri:
+    name: "Alpha Centauri"
+    central_body:
+      name: "Proxima"
+      type: EXOTIC
+      mass: 200000
+      heat: 4000000
+    quests:
+      - id: collect_crystal
+        title: "Crystal Hunter"
+        description: "Collect 3 crystal shards"
+        type: collect
+        target: CRYSTAL
+        quantity: 3
+        reward_credits: 200
+      - id: visit_kepler
+        title: "Kepler's Call"
+        description: "Visit Kepler's Reach"
+        type: visit
+        target: keplers_reach
+        quantity: 1
+        reward_credits: 300
+
+  keplers_reach:
+    name: "Kepler's Reach"
+    central_body:
+      name: "Kepler"
+      type: EXOTIC
+      mass: 450000
+      heat: 9000000
+    quests:
+      - id: collect_fuel
+        title: "Fuel Run"
+        description: "Collect 10 fuel cells"
+        type: collect
+        target: FUEL
+        quantity: 10
+        reward_credits: 150
+
+  void_maw:
+    name: "Void Maw"
+    central_body:
+      name: "Maw of the Void"
+      type: BLACKHOLE
+      mass: 900000
+      sound_override:
+        max_volume: 0.6
+        danger:
+          max_volume: 0.9
+          layers:
+            - waveform: sawtooth
+              base_freq: 10
+              freq_range: 50
+              pulse_hz: 8.0
+    quests:
+      - id: collect_exotic
+        title: "Exotic Harvest"
+        description: "Collect 2 exotic matter near the black hole"
+        type: collect
+        target: EXOTIC
+        quantity: 2
+        reward_credits: 1000
+
+  terra:
+    name: "Terra"
+    central_body:
+      name: "Solaris"
+      type: EXOTIC
+      mass: 250000
+      heat: 5000000
+    quests:
+      - id: explore_terra
+        title: "New World"
+        description: "Land on the rocky planet in Terra system"
+        type: visit
+        target: terra
+        quantity: 1
+        reward_credits: 750

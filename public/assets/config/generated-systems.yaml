@@ -1,0 +1,67 @@
+systems:
+  crimson_nebula:
+    name: Crimson Nebula
+    gx: 500
+    gy: 50
+    connections:
+      - alpha_centauri
+      - frostheim
+    central_body:
+      type: EXOTIC
+      mass: 400000
+      heat: 8000000
+    bodies:
+      - asset: planet_lava_world.png
+        composite_type: rigid
+        cell_scale: 8
+        orbit_radius: 1800
+        spin_rate: 0.15
+      - asset: station_mining_station.png
+        composite_type: spawned
+        cell_scale: 8
+        orbit_radius: 2800
+        spin_rate: 0.3
+  frostheim:
+    name: Frostheim
+    gx: 550
+    gy: 250
+    connections:
+      - void_maw
+      - crimson_nebula
+      - the_nursery
+    central_body:
+      type: EXOTIC
+      mass: 180000
+      heat: 3000000
+    bodies:
+      - asset: planet_frozen_ocean.png
+        composite_type: rigid
+        cell_scale: 8
+        orbit_radius: 2000
+        spin_rate: 0.1
+      - asset: object_crystal_asteroid.png
+        composite_type: spawned_full
+        cell_scale: 8
+        orbit_radius: 3200
+        spin_rate: 0.5
+  the_nursery:
+    name: The Nursery
+    gx: 600
+    gy: 420
+    connections:
+      - frostheim
+    central_body:
+      type: EXOTIC
+      mass: 280000
+      heat: 5500000
+    bodies:
+      - asset: planet_garden_world.png
+        composite_type: rigid
+        cell_scale: 8
+        orbit_radius: 2200
+        spin_rate: 0.12
+      - asset: station_research_station.png
+        composite_type: spawned
+        cell_scale: 8
+        orbit_radius: 3000
+        spin_rate: 0.25

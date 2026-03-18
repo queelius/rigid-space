@@ -1,0 +1,51 @@
+ship:
+  thrust_strength: 500
+  rotation_rate: 12
+  cannon:
+    mass: 1.0
+    speed: 400
+
+physics:
+  substeps: 4
+  timestep: 0.016
+
+solar_flares:
+  probability: 0.02
+  spawn_offset: 50
+  speed: [100, 300]
+  mass: 0.5
+  heat: 5000
+  max_particles: 3000
+
+orbit_stabilization:
+  station_blend: 0.2
+  default_blend: 0.1
+
+thermal:
+  cooling_rate: 2.0        # heat *= (1 - rate*dt) per frame. Higher = cools faster.
+  bond_damping: 40.0       # spring damping coefficient. Higher = kills vibrations faster.
+
+collision:
+  restitution: 0.5
+  heat_fraction: 0.1       # lowered from 0.3 — less heat per collision
+  break_threshold: 500
+  event_threshold: 100
+
+docking:
+  range: 30
+  max_velocity: 20
+  bond_stiffness: 2000
+  bond_max_stress: 10000
+
+hyperspace:
+  fuel_per_mass: 0.02         # fuel cells consumed per unit of ship mass on gate jump
+  min_fuel: 1                 # minimum fuel cost per jump (even for tiny ships)
+
+blackhole:
+  accretion_radius_factor: 5
+  mass_absorption: 0.9
+  absorption_heat: 100
+  tidal_scale: 0.01
+  tidal_heat_scale: 1000
+  drag: 0.001
+  dilation_range_factor: 10

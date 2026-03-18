@@ -1,0 +1,13 @@
+keybindings:
+  thrust_forward: w
+  thrust_backward: s
+  rotate_left: a
+  rotate_right: d
+  fire_cannon: ' '
+  orbit_lock: o
+  hyperspace: h
+  builder_toggle: b
+  interact: t
+  zoom_in: '='
+  zoom_out: '-'
+  minimap_toggle: m

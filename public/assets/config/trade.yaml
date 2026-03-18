@@ -1,0 +1,27 @@
+items:
+  - name: Iron Plating
+    type: IRON
+    buy_price: 10
+    sell_price: 5
+  - name: Carbon Fiber
+    type: CARBON
+    buy_price: 8
+    sell_price: 4
+  - name: Fuel Cell
+    type: FUEL
+    buy_price: 5
+    sell_price: 2
+  - name: Crystal Shard
+    type: CRYSTAL
+    buy_price: 20
+    sell_price: 12
+  - name: Reactor Core
+    type: REACTOR
+    buy_price: 50
+    sell_price: 30
+  - name: Exotic Matter
+    type: EXOTIC
+    buy_price: 100
+    sell_price: 60
+
+starting_credits: 500

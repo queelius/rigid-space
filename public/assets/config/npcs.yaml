@@ -1,0 +1,25 @@
+npc_pool:
+  names:
+    - Captain Voss
+    - Engineer Mira
+    - Trader Kael
+    - Scientist Anya
+    - Pilot Rhea
+    - Commander Theron
+    - Mechanic Zara
+    - Navigator Orin
+
+  personalities:
+    - gruff but fair merchant who drives hard bargains
+    - curious scientist fascinated by exotic matter
+    - seasoned pilot who has seen every corner of the galaxy
+    - cautious trader who values safety above profit
+    - enthusiastic engineer who loves experimental ship designs
+    - mysterious loner who speaks in riddles about deep space
+    - friendly bartender who collects stories from travelers
+    - strict military officer who respects discipline and honor
+
+  default_inventory:
+    - fuel cells
+    - iron plating
+    - crystal shards

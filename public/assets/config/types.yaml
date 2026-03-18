@@ -1,0 +1,107 @@
+types:
+  ROCK:
+    mass: 6.0
+    bond_strength: 700
+    color: [150, 130, 80]
+
+  IRON:
+    mass: 8.0
+    bond_strength: 1000
+    color: [180, 180, 200]
+
+  CARBON:
+    mass: 2.0
+    bond_strength: 400
+    color: [80, 80, 80]
+
+  FUEL:
+    mass: 1.0
+    bond_strength: 100
+    color: [50, 200, 50]
+
+  THRUSTER:
+    mass: 5.0
+    bond_strength: 600
+    color: [255, 130, 0]
+
+  CRYSTAL:
+    mass: 4.0
+    bond_strength: 200
+    color: [100, 200, 255]
+
+  EXPLOSIVE:
+    mass: 3.0
+    bond_strength: 150
+    color: [255, 50, 50]
+
+  WATER:
+    mass: 1.0
+    bond_strength: 50
+    color: [50, 100, 255]
+
+  EXOTIC:
+    mass: 4.0
+    bond_strength: 500
+    color: [255, 255, 130]
+    # Stars: visual/physics radius derived from mass
+    radius_formula: sqrt   # radius = sqrt(mass) * radius_scale
+    radius_scale: 0.4
+
+  EMITTER:
+    mass: 4.0
+    bond_strength: 500
+    color: [255, 100, 200]
+
+  COCKPIT:
+    mass: 6.0
+    bond_strength: 800
+    color: [200, 230, 255]
+
+  CARGO:
+    mass: 3.0
+    bond_strength: 300
+    color: [180, 140, 80]
+
+  REACTOR:
+    mass: 7.0
+    bond_strength: 600
+    color: [100, 255, 150]
+
+  BLACKHOLE:
+    mass: 1.0
+    bond_strength: 0
+    color: [20, 0, 40]
+    radius_formula: sqrt
+    radius_scale: 0.5
+
+  # Terrain types for detailed planetary surfaces
+  SOIL:
+    mass: 3.0
+    bond_strength: 200
+    color: [120, 90, 50]
+
+  PLANT:
+    mass: 1.0
+    bond_strength: 150
+    color: [30, 140, 30]
+
+  ICE:
+    mass: 1.5
+    bond_strength: 300
+    color: [200, 230, 255]
+
+  SAND:
+    mass: 2.0
+    bond_strength: 80
+    color: [220, 200, 140]
+
+  LAVA:
+    mass: 6.0
+    bond_strength: 100
+    color: [255, 80, 20]
+
+  DRIVECORE:
+    mass: 50
+    bond_strength: 800
+    color: [139, 0, 255]
+    radius_scale: 1.0
