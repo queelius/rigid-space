@@ -46,10 +46,12 @@ Replace the hardcoded proof-of-concept `main.ts` (~207 lines of inline bodies, r
 - `src/config/loader.ts`
 - All screen states under `src/game/states/*` (not wired yet, left intact)
 
-### Dependencies to Install
+### Dependencies to Install (step 1 of implementation)
 
-- `js-yaml` (runtime)
-- `@types/js-yaml` (dev)
+These packages are already imported by existing ported files (`config/loader.ts`, `game/input.ts`, `game/trade.ts`) but are missing from `package.json`. Install before any other work:
+
+- `js-yaml` (runtime, add to `dependencies`)
+- `@types/js-yaml` (dev, add to `devDependencies`)
 
 ## Module Designs
 
@@ -65,14 +67,14 @@ interface RegistryEntry {
 
 **API:**
 - `add(tag: string, spawned: SpawnedBody): number`. Registers, returns auto-incremented ID.
-- `remove(world: RAPIER.World, id: number): boolean`. Removes rigid body from Rapier world, deletes entry.
+- `remove(world: RAPIER.World, id: number): boolean`. Clears all colliders from the `SpawnedBody.colliderMap`, calls `world.removeRigidBody(body)`, deletes entry.
 - `get(id: number): RegistryEntry | undefined`
 - `getByTag(tag: string): RegistryEntry[]`. All entries with that tag.
 - `firstByTag(tag: string): RegistryEntry | undefined`. Convenience for singletons (star, ship).
 - `all(): RegistryEntry[]`. Full iteration (for gravity, rendering).
 - `[Symbol.iterator]`. Iterates RegistryEntry values.
 
-The registry does not own the Rapier World. `remove()` takes the world as a parameter to clean up the rigid body.
+The registry does not own the Rapier World. `remove()` takes the world as a parameter to clean up the rigid body. The caller is responsible for also calling `renderer.onBodyRemoved(id)` when needed (no-op for the immediate-mode renderer, but required for Priority 2's sprite-based renderer).
 
 ### Gravity (`src/engine/gravity.ts`)
 
@@ -85,7 +87,7 @@ export function applyGravity(
 ```
 
 - If `attractorTag` is provided: only bodies with that tag attract, all others are attracted. Avoids O(N^2).
-- If omitted: full N-body pairwise gravity.
+- If omitted: full N-body pairwise gravity. Each pair computed once with equal-opposite forces applied to both bodies.
 - Skips kinematic bodies as targets.
 - Minimum distance clamped to avoid singularity (dist < 5 guard).
 - Pure function: no state, no class.
@@ -103,7 +105,7 @@ export class Ship {
 
 **API:**
 - `constructor(registryId: number, spawned: SpawnedBody, config: GameplayShipConfig)`
-- `applyControls(input: InputManager): void`. Reads `thrust_forward`, `thrust_backward`, `rotate_left`, `rotate_right` from InputManager, applies `addForce`/`addTorque`.
+- `applyControls(input: InputManager): void`. Reads `thrust_forward`, `thrust_backward`, `rotate_left`, `rotate_right` from InputManager, applies `addForce`/`addTorque`. Must run before `world.step()` in the same physics tick since Rapier clears forces after each step.
 - `position(): { x: number, y: number }`. From Rapier body translation.
 - `velocity(): { x: number, y: number }`. From Rapier body linvel.
 - `speed(): number`. Velocity magnitude.
@@ -167,8 +169,8 @@ export function startGameLoop(
 - Caps accumulator to `timestep * 5` (spiral-of-death prevention)
 - `fixedUpdate` called per physics step: gravity, ship controls, `rapierWorld.step()`, screen stack update
 - `render` called once per frame after all physics steps
-- Returns `stop()` handle for cleanup/tests
-- Respects `screenStack.paused`: skips fixedUpdate but still calls render
+- Returns `stop()` handle that cancels RAF. For test cleanup, the caller should also remove InputManager keyboard listeners via `removeEventListener`
+- Respects `screenStack.paused`: skips physics (ship controls, gravity, `rapierWorld.step()`) but still calls `screenStack.update()` and render
 
 ### main.ts (Thin Composition Root)
 
@@ -190,12 +192,16 @@ async function main() {
   const registry = new BodyRegistry()
   const input = new InputManager()
   await input.loadConfig()
+  window.addEventListener('keydown', e => input.handleKeyDown(e))
+  window.addEventListener('keyup', e => input.handleKeyUp(e))
   const screenStack = new ScreenStack()
   const events = new EventBus()
   const renderer = new GraphicsBodyRenderer(app)
 
   // 5. Spawn initial bodies via GridComposite + spawnComposite
-  //    Star: 1x1 EXOTIC grid, kinematic, cellScale=50, ball collider override
+  //    Star: 1x1 EXOTIC grid, kinematic, cellScale=50
+  //      After spawn: remove cuboid collider, add ball(50) collider,
+  //      delete stale colliderMap entry
   //    Ship: ~3x5 grid (COCKPIT, THRUSTERs, FUEL), dynamic, cellScale=10
   //    Asteroids: 20x random 1x1-3x3 ROCK grids, random orbital velocities
 
@@ -215,13 +221,21 @@ async function main() {
       ctx.camera.x = ship.position().x
       ctx.camera.y = ship.position().y
       renderer.renderBodies(registry, ctx.camera)
-      renderHUD(ctx)
+      renderHUD(ctx)  // inline function in main.ts, draws text overlay on #hud canvas
+      // screenStack.render(hudCtx, w, h)  // wired when screen states are connected
     },
   })
 }
 ```
 
-Star collider: `spawnComposite` creates cuboid colliders from grid cells. For the star, after spawning we remove the default cuboid collider and add a ball collider manually. This is a one-line override.
+**Star collider override:** `spawnComposite` creates a cuboid collider for the 1x1 grid cell. For the star, we replace it with a ball collider (radius 50, matching the PoC) so it renders and collides as a circle:
+
+1. Get the cuboid collider from `spawned.colliderMap.get("0,0")`
+2. Call `world.removeCollider(collider, false)`
+3. Create `RAPIER.ColliderDesc.ball(50).setDensity(100)` and attach to the body
+4. Delete the stale `"0,0"` key from colliderMap (star does not need per-cell damage)
+
+**`renderHUD`** is an inline function in `main.ts` that draws the text overlay on the `#hud` Canvas2D (body count, speed, controls hint). Same content as the current PoC but reads from GameContext instead of magic array indices. Extracted to its own module in Priority 2.
 
 ## Cleanup
 
@@ -251,4 +265,4 @@ Star collider: `spawnComposite` creates cuboid colliders from grid cells. For th
 - Screen states
 - Config loading (needs Vite dev server for fetch)
 
-Tests live in `src/**/*.test.ts` alongside the modules they test.
+Tests live in `src/**/*.test.ts` alongside the modules they test. The existing `vitest.config.ts` only includes `tests/**/*.test.ts`, so update it to also include `src/**/*.test.ts`.
