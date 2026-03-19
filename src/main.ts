@@ -1,23 +1,28 @@
-/**
- * Rigid Space Engine - proof of concept
- *
- * Rapier2D rigid body physics + PixiJS rendering.
- * Star Control 2-inspired sandbox with rigid body composites.
- */
-
 import RAPIER from '@dimforge/rapier2d-compat'
-import { Application, Graphics } from 'pixi.js'
+import { Application } from 'pixi.js'
+import { loadConfig } from './config/loader'
+import { applyTypeConfig, Type } from './engine/types'
+import { GridComposite } from './engine/grid-composite'
+import { spawnComposite } from './engine/rigid-spawn'
+import { BodyRegistry } from './engine/body-registry'
+import { applyGravity } from './engine/gravity'
+import { Ship } from './game/ship'
+import { InputManager } from './game/input'
+import { ScreenStack } from './game/screen-stack'
+import { EventBus } from './engine/events'
+import { GraphicsBodyRenderer } from './render/body-renderer'
+import { createGameLoop } from './game/game-loop'
+import type { GameContext } from './game/game-context'
 
 async function main() {
-  await RAPIER.init({})
+  // 1. Init Rapier WASM
+  await RAPIER.init()
 
-  // ── Physics world ──────────────────────────────────────────────────
+  // 2. Load config, apply type properties
+  const config = await loadConfig()
+  applyTypeConfig(config.types)
 
-  const gravity = new RAPIER.Vector2(0.0, 0.0)
-  const world = new RAPIER.World(gravity)
-
-  // ── PixiJS renderer ────────────────────────────────────────────────
-
+  // 3. Init PixiJS
   const app = new Application()
   await app.init({
     canvas: document.getElementById('game') as HTMLCanvasElement,
@@ -27,47 +32,44 @@ async function main() {
     preference: 'webgl',
   })
 
-  const gfx = new Graphics()
-  app.stage.addChild(gfx)
+  // 4. Create core systems
+  const rapierWorld = new RAPIER.World(new RAPIER.Vector2(0, 0))
+  const registry = new BodyRegistry()
+  const input = new InputManager()
+  await input.loadConfig()
+  window.addEventListener('keydown', e => input.handleKeyDown(e))
+  window.addEventListener('keyup', e => input.handleKeyUp(e))
+  const screenStack = new ScreenStack()
+  const events = new EventBus()
+  const renderer = new GraphicsBodyRenderer(app)
 
-  let camX = 0, camY = 0
-  const zoom = 1
+  // 5. Spawn star (1x1 EXOTIC, kinematic, ball collider)
+  const starGrid = new GridComposite(1, 1)
+  starGrid.set(0, 0, Type.EXOTIC)
+  const starSpawned = spawnComposite(rapierWorld, starGrid, 0, 0, 0, 0, 50, true)
+  // Replace cuboid with ball collider for circular star
+  const starCuboid = starSpawned.colliderMap.get('0,0')!
+  rapierWorld.removeCollider(starCuboid, false)
+  rapierWorld.createCollider(
+    RAPIER.ColliderDesc.ball(50).setDensity(100),
+    starSpawned.body,
+  )
+  starSpawned.colliderMap.delete('0,0')
+  registry.add('star', starSpawned)
 
-  // ── Bodies ─────────────────────────────────────────────────────────
+  // 6. Spawn ship (3x5 grid)
+  const shipGrid = new GridComposite(3, 5)
+  shipGrid.set(1, 4, Type.COCKPIT)   // nose
+  shipGrid.set(0, 2, Type.THRUSTER)  // left engine
+  shipGrid.set(2, 2, Type.THRUSTER)  // right engine
+  shipGrid.set(1, 2, Type.REACTOR)   // center
+  shipGrid.set(1, 1, Type.FUEL)
+  shipGrid.set(1, 0, Type.FUEL)
+  const shipSpawned = spawnComposite(rapierWorld, shipGrid, 300, 0, 0, 30, 10)
+  const shipId = registry.add('ship', shipSpawned)
+  const ship = new Ship(shipId, shipSpawned, config.gameplay.ship)
 
-  interface BodyInfo {
-    body: RAPIER.RigidBody
-    color: number
-    halfW: number
-    halfH: number
-    shape: 'box' | 'circle'
-    radius?: number
-  }
-  const bodies: BodyInfo[] = []
-
-  // Central "star"
-  {
-    const desc = RAPIER.RigidBodyDesc.kinematicPositionBased()
-      .setTranslation(0, 0)
-    const body = world.createRigidBody(desc)
-    world.createCollider(RAPIER.ColliderDesc.ball(50).setDensity(100), body)
-    bodies.push({ body, color: 0xFFDD44, halfW: 50, halfH: 50, shape: 'circle', radius: 50 })
-  }
-
-  // Ship
-  {
-    const desc = RAPIER.RigidBodyDesc.dynamic()
-      .setTranslation(300, 0)
-      .setLinvel(0, 30)
-    const body = world.createRigidBody(desc)
-    world.createCollider(
-      RAPIER.ColliderDesc.cuboid(10, 20).setDensity(2).setRestitution(0.3),
-      body,
-    )
-    bodies.push({ body, color: 0x44AAFF, halfW: 10, halfH: 20, shape: 'box' })
-  }
-
-  // Asteroids
+  // 7. Spawn asteroids
   for (let i = 0; i < 20; i++) {
     const angle = Math.random() * Math.PI * 2
     const r = 150 + Math.random() * 400
@@ -76,132 +78,64 @@ async function main() {
     const v = 20 + Math.random() * 15
     const vx = -Math.sin(angle) * v
     const vy = Math.cos(angle) * v
-    const size = 3 + Math.random() * 8
+    const size = 1 + Math.floor(Math.random() * 3) // 1x1 to 3x3
 
-    const desc = RAPIER.RigidBodyDesc.dynamic()
-      .setTranslation(x, y)
-      .setLinvel(vx, vy)
-    const body = world.createRigidBody(desc)
-    world.createCollider(
-      RAPIER.ColliderDesc.ball(size).setDensity(1).setRestitution(0.5),
-      body,
-    )
-    bodies.push({ body, color: 0x888888, halfW: size, halfH: size, shape: 'circle', radius: size })
-  }
-
-  // ── Custom gravity ─────────────────────────────────────────────────
-
-  function applyGravity() {
-    const G = 50000
-    const starPos = bodies[0].body.translation()
-
-    for (let i = 1; i < bodies.length; i++) {
-      const body = bodies[i].body
-      const pos = body.translation()
-      const dx = starPos.x - pos.x
-      const dy = starPos.y - pos.y
-      const distSq = dx * dx + dy * dy
-      const dist = Math.sqrt(distSq)
-      if (dist < 5) continue
-
-      const force = G * body.mass() / distSq
-      body.addForce(
-        new RAPIER.Vector2(force * dx / dist, force * dy / dist),
-        true,
-      )
-    }
-  }
-
-  // ── Input ──────────────────────────────────────────────────────────
-
-  const keys = new Set<string>()
-  window.addEventListener('keydown', (e) => keys.add(e.key.toLowerCase()))
-  window.addEventListener('keyup', (e) => keys.delete(e.key.toLowerCase()))
-
-  function applyShipControls() {
-    const shipBody = bodies[1].body
-    const thrustForce = 200
-    const rotForce = 50
-
-    const angle = shipBody.rotation()
-    const fx = -Math.sin(angle)
-    const fy = Math.cos(angle)
-
-    if (keys.has('w') || keys.has('arrowup')) {
-      shipBody.addForce(new RAPIER.Vector2(fx * thrustForce, fy * thrustForce), true)
-    }
-    if (keys.has('s') || keys.has('arrowdown')) {
-      shipBody.addForce(new RAPIER.Vector2(-fx * thrustForce * 0.5, -fy * thrustForce * 0.5), true)
-    }
-    if (keys.has('a') || keys.has('arrowleft')) {
-      shipBody.addTorque(-rotForce, true)
-    }
-    if (keys.has('d') || keys.has('arrowright')) {
-      shipBody.addTorque(rotForce, true)
-    }
-  }
-
-  // ── Game loop ──────────────────────────────────────────────────────
-
-  function tick() {
-    applyGravity()
-    applyShipControls()
-    world.step()
-
-    // Camera follows ship
-    const shipPos = bodies[1].body.translation()
-    camX = shipPos.x
-    camY = shipPos.y
-
-    const w = app.screen.width
-    const h = app.screen.height
-
-    gfx.clear()
-
-    for (const info of bodies) {
-      const pos = info.body.translation()
-      const rot = info.body.rotation()
-      const sx = w / 2 + (pos.x - camX) * zoom
-      const sy = h / 2 - (pos.y - camY) * zoom
-
-      if (info.shape === 'circle') {
-        gfx.circle(sx, sy, (info.radius ?? info.halfW) * zoom)
-          .fill(info.color)
-      } else {
-        const hw = info.halfW * zoom
-        const hh = info.halfH * zoom
-        const cos = Math.cos(-rot)
-        const sin = Math.sin(-rot)
-        // Four corners of rotated box
-        const corners = [
-          [-hw, -hh], [hw, -hh], [hw, hh], [-hw, hh],
-        ].map(([cx, cy]) => [sx + cx * cos - cy * sin, sy + cx * sin + cy * cos])
-        gfx.moveTo(corners[0][0], corners[0][1])
-        for (let c = 1; c < 4; c++) gfx.lineTo(corners[c][0], corners[c][1])
-        gfx.closePath().fill(info.color)
+    const grid = new GridComposite(size, size)
+    for (let gy = 0; gy < size; gy++) {
+      for (let gx = 0; gx < size; gx++) {
+        if (Math.random() < 0.7) {
+          grid.set(gx, gy, Math.random() < 0.2 ? Type.IRON : Type.ROCK)
+        }
       }
     }
+    const spawned = spawnComposite(rapierWorld, grid, x, y, vx, vy, 8)
+    registry.add('asteroid', spawned)
+  }
 
-    // HUD
-    const hudCanvas = document.getElementById('hud') as HTMLCanvasElement
+  // 8. Build context
+  const ctx: GameContext = {
+    rapierWorld, registry, ship, input, screenStack, events, config, renderer,
+    camera: { x: 0, y: 0, zoom: 1 },
+  }
+
+  // 9. HUD setup
+  const hudCanvas = document.getElementById('hud') as HTMLCanvasElement
+
+  function renderHUD(): void {
+    const w = app.screen.width
+    const h = app.screen.height
     if (hudCanvas.width !== w || hudCanvas.height !== h) {
       hudCanvas.width = w
       hudCanvas.height = h
     }
-    const ctx = hudCanvas.getContext('2d')!
-    ctx.clearRect(0, 0, w, h)
-    ctx.fillStyle = '#aaa'
-    ctx.font = '14px monospace'
-    ctx.fillText('Rigid Space  |  Rapier2D WASM', 10, 20)
-    ctx.fillText(`Bodies: ${bodies.length}  |  WASD: fly`, 10, 40)
-    const shipVel = bodies[1].body.linvel()
-    const speed = Math.sqrt(shipVel.x * shipVel.x + shipVel.y * shipVel.y)
-    ctx.fillText(`Speed: ${speed.toFixed(0)}`, 10, 60)
-
-    requestAnimationFrame(tick)
+    const hctx = hudCanvas.getContext('2d')!
+    hctx.clearRect(0, 0, w, h)
+    hctx.fillStyle = '#aaa'
+    hctx.font = '14px monospace'
+    hctx.fillText('Rigid Space  |  Rapier2D WASM', 10, 20)
+    hctx.fillText(`Bodies: ${registry.all().length}  |  WASD: fly`, 10, 40)
+    hctx.fillText(`Speed: ${ship.speed().toFixed(0)}`, 10, 60)
   }
 
-  tick()
+  // 10. Start game loop
+  const loop = createGameLoop(config.gameplay.physics.timestep, {
+    fixedUpdate(_dt) {
+      if (!screenStack.paused) {
+        ship.applyControls(input)
+        applyGravity(registry, 50000, 'star')
+        rapierWorld.step()
+      }
+      screenStack.update(_dt)
+    },
+    render(_interpolation) {
+      ctx.camera.x = ship.position().x
+      ctx.camera.y = ship.position().y
+      renderer.renderBodies(registry, ctx.camera)
+      renderHUD()
+    },
+  })
+
+  loop.start()
 }
 
 main()
