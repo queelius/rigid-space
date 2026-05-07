@@ -8,31 +8,36 @@ export class Ship {
   readonly spawned: SpawnedBody
   thrustStrength: number
   rotationRate: number
+  maxSpeed: number
+  reverseThrustFactor: number
+
+  private _thrusting = false
 
   constructor(registryId: number, spawned: SpawnedBody, config: GameplayShipConfig) {
     this.registryId = registryId
     this.spawned = spawned
     this.thrustStrength = config.thrust_strength
     this.rotationRate = config.rotation_rate
+    this.maxSpeed = config.max_speed
+    this.reverseThrustFactor = config.reverse_thrust_factor
   }
 
   applyControls(input: InputManager): void {
+    const fwd = input.isAction('thrust_forward')
+    const back = input.isAction('thrust_backward')
+    this._thrusting = fwd || back
+
     const body = this.spawned.body
     const angle = body.rotation()
     const fx = -Math.sin(angle)
     const fy = Math.cos(angle)
 
-    if (input.isAction('thrust_forward')) {
-      body.addForce(
-        new RAPIER.Vector2(fx * this.thrustStrength, fy * this.thrustStrength),
-        true,
-      )
+    if (fwd) {
+      body.addForce(new RAPIER.Vector2(fx * this.thrustStrength, fy * this.thrustStrength), true)
     }
-    if (input.isAction('thrust_backward')) {
-      body.addForce(
-        new RAPIER.Vector2(-fx * this.thrustStrength * 0.5, -fy * this.thrustStrength * 0.5),
-        true,
-      )
+    if (back) {
+      const rev = this.thrustStrength * this.reverseThrustFactor
+      body.addForce(new RAPIER.Vector2(-fx * rev, -fy * rev), true)
     }
     if (input.isAction('rotate_left')) {
       body.addTorque(-this.rotationRate, true)
@@ -40,6 +45,20 @@ export class Ship {
     if (input.isAction('rotate_right')) {
       body.addTorque(this.rotationRate, true)
     }
+  }
+
+  /** Clamp linear velocity magnitude to maxSpeed. Call after world.step(). */
+  clampSpeed(): void {
+    const v = this.spawned.body.linvel()
+    const mag = Math.sqrt(v.x * v.x + v.y * v.y)
+    if (mag > this.maxSpeed) {
+      const k = this.maxSpeed / mag
+      this.spawned.body.setLinvel(new RAPIER.Vector2(v.x * k, v.y * k), true)
+    }
+  }
+
+  isThrusting(): boolean {
+    return this._thrusting
   }
 
   position(): { x: number; y: number } {

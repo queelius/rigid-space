@@ -85,4 +85,55 @@ describe('Ship', () => {
     const ship = makeShip()
     expect(ship.rotation()).toBe(0)
   })
+
+  it('clampSpeed reduces velocity magnitude to maxSpeed', () => {
+    const ship = makeShip()
+    ship.spawned.body.setLinvel(new RAPIER.Vector2(500, 0), true)
+    ship.clampSpeed()
+    const v = ship.spawned.body.linvel()
+    expect(Math.sqrt(v.x * v.x + v.y * v.y)).toBeCloseTo(250, 0)
+  })
+
+  it('clampSpeed preserves direction', () => {
+    const ship = makeShip()
+    ship.spawned.body.setLinvel(new RAPIER.Vector2(300, 400), true)  // mag=500, dir=(0.6, 0.8)
+    ship.clampSpeed()
+    const v = ship.spawned.body.linvel()
+    expect(v.x / 250).toBeCloseTo(0.6, 1)
+    expect(v.y / 250).toBeCloseTo(0.8, 1)
+  })
+
+  it('clampSpeed is no-op when below maxSpeed', () => {
+    const ship = makeShip()
+    ship.spawned.body.setLinvel(new RAPIER.Vector2(100, 0), true)
+    ship.clampSpeed()
+    const v = ship.spawned.body.linvel()
+    expect(v.x).toBe(100)
+    expect(v.y).toBe(0)
+  })
+
+  it('isThrusting is false initially', () => {
+    const ship = makeShip()
+    expect(ship.isThrusting()).toBe(false)
+  })
+
+  it('isThrusting becomes true when thrust_forward is held', () => {
+    const ship = makeShip()
+    const input = new InputManager()
+    input['actionToKey'].set('thrust_forward', 'w')
+    input['keyHeld']['w'] = true
+    ship.applyControls(input)
+    expect(ship.isThrusting()).toBe(true)
+  })
+
+  it('isThrusting becomes false when thrust released', () => {
+    const ship = makeShip()
+    const input = new InputManager()
+    input['actionToKey'].set('thrust_forward', 'w')
+    input['keyHeld']['w'] = true
+    ship.applyControls(input)
+    input['keyHeld']['w'] = false
+    ship.applyControls(input)
+    expect(ship.isThrusting()).toBe(false)
+  })
 })
