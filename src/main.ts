@@ -1,12 +1,9 @@
 import RAPIER from '@dimforge/rapier2d-compat'
 import { Application } from 'pixi.js'
 import { loadConfig } from './config/loader'
-import { applyTypeConfig, Type } from './engine/types'
-import { GridComposite } from './engine/grid-composite'
-import { spawnComposite } from './engine/rigid-spawn'
+import { applyTypeConfig } from './engine/types'
 import { BodyRegistry } from './engine/body-registry'
 import { applyGravity } from './engine/gravity'
-import { Ship } from './game/ship'
 import { InputManager } from './game/input'
 import { ScreenStack } from './game/screen-stack'
 import { EventBus } from './engine/events'
@@ -15,9 +12,13 @@ import { createGameLoop } from './game/game-loop'
 import { Camera } from './game/camera'
 import { SoundEngine } from './game/sound'
 import { drainCollisionEvents } from './game/collision-events'
+import { spawnInitialWorld, despawnAll, updateAudio } from './game/lifecycle'
+import { MainMenu } from './game/states/main-menu'
+import { GameHUD } from './game/states/game-hud'
+import { PauseMenu } from './game/states/pause-menu'
 import type { GameContext } from './game/game-context'
 
-async function main() {
+async function main(): Promise<void> {
   await RAPIER.init()
 
   const config = await loadConfig()
@@ -31,123 +32,133 @@ async function main() {
     antialias: true,
     preference: 'webgl',
   })
-
   const hudCanvas = document.getElementById('hud') as HTMLCanvasElement
 
-  const rapierWorld = new RAPIER.World(new RAPIER.Vector2(0, 0))
-  const eventQueue = new RAPIER.EventQueue(true)
-  const registry = new BodyRegistry()
   const input = new InputManager()
   await input.loadConfig()
-  window.addEventListener('keydown', e => input.handleKeyDown(e))
-  window.addEventListener('keyup', e => input.handleKeyUp(e))
-  const screenStack = new ScreenStack()
-  const events = new EventBus()
-  const renderer = new GraphicsBodyRenderer(app)
-  const camera = new Camera()
-  const soundEngine = new SoundEngine()
-
-  // Spawn star: 1x1 EXOTIC, kinematic. Replace cuboid with ball collider that has
-  // ActiveEvents.COLLISION_EVENTS so ship-vs-star bumps fire COLLISION events.
-  const starGrid = new GridComposite(1, 1)
-  starGrid.set(0, 0, Type.EXOTIC)
-  const starSpawned = spawnComposite(rapierWorld, starGrid, 0, 0, 0, 0, 50, { kinematic: true })
-  const starCuboid = starSpawned.colliderMap.get('0,0')!
-  rapierWorld.removeCollider(starCuboid, false)
-  rapierWorld.createCollider(
-    RAPIER.ColliderDesc.ball(50)
-      .setDensity(100)
-      .setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS),
-    starSpawned.body,
-  )
-  starSpawned.colliderMap.delete('0,0')
-  registry.add('star', starSpawned, { proximityKey: 'star', radius: 50 })
-
-  // Spawn ship at (500, 0) at rest with SC2 damping config
-  const shipGrid = new GridComposite(3, 5)
-  shipGrid.set(1, 4, Type.COCKPIT)
-  shipGrid.set(0, 2, Type.THRUSTER)
-  shipGrid.set(2, 2, Type.THRUSTER)
-  shipGrid.set(1, 2, Type.REACTOR)
-  shipGrid.set(1, 1, Type.FUEL)
-  shipGrid.set(1, 0, Type.FUEL)
-  const shipSpawned = spawnComposite(rapierWorld, shipGrid, 500, 0, 0, 0, 10, {
-    linearDamping: config.gameplay.ship.linear_damping,
-    angularDamping: config.gameplay.ship.angular_damping,
-    enableCollisionEvents: true,
-  })
-  const shipId = registry.add('ship', shipSpawned)
-  const ship = new Ship(shipId, shipSpawned, config.gameplay.ship)
-
-  // Spawn 20 asteroids in rough orbits, with collision events enabled
-  for (let i = 0; i < 20; i++) {
-    const angle = Math.random() * Math.PI * 2
-    const r = 150 + Math.random() * 400
-    const x = Math.cos(angle) * r
-    const y = Math.sin(angle) * r
-    const v = 20 + Math.random() * 15
-    const vx = -Math.sin(angle) * v
-    const vy = Math.cos(angle) * v
-    const size = 1 + Math.floor(Math.random() * 3)
-    const grid = new GridComposite(size, size)
-    for (let gy = 0; gy < size; gy++) {
-      for (let gx = 0; gx < size; gx++) {
-        if (Math.random() < 0.7) {
-          grid.set(gx, gy, Math.random() < 0.2 ? Type.IRON : Type.ROCK)
-        }
-      }
-    }
-    const spawned = spawnComposite(rapierWorld, grid, x, y, vx, vy, 8, {
-      enableCollisionEvents: true,
-    })
-    registry.add('asteroid', spawned)
-  }
 
   const ctx: GameContext = {
-    app, hudCanvas,
-    rapierWorld, eventQueue,
-    registry,
-    ship,                // not undefined here; menu lifecycle adds the optional path in Task 14
-    input, screenStack, events,
-    config, renderer, camera, soundEngine,
+    app,
+    hudCanvas,
+    rapierWorld: new RAPIER.World(new RAPIER.Vector2(0, 0)),
+    eventQueue: new RAPIER.EventQueue(true),
+    registry: new BodyRegistry(),
+    ship: undefined,
+    input,
+    screenStack: new ScreenStack(),
+    events: new EventBus(),
+    config,
+    renderer: new GraphicsBodyRenderer(app),
+    camera: new Camera(),
+    soundEngine: new SoundEngine(),  // not init'd yet; init runs on user gesture
   }
 
-  // HUD render. This is replaced by GameHUD ScreenState in Task 14.
-  function renderHUD(): void {
-    const w = app.screen.width
-    const h = app.screen.height
-    if (hudCanvas.width !== w) hudCanvas.width = w
-    if (hudCanvas.height !== h) hudCanvas.height = h
-    const hctx = hudCanvas.getContext('2d')!
-    hctx.clearRect(0, 0, w, h)
-    hctx.fillStyle = '#aaa'
-    hctx.font = '14px monospace'
-    hctx.fillText('Rigid Space  |  Rapier2D WASM', 10, 20)
-    hctx.fillText(`Bodies: ${registry.all().length}  |  WASD: fly`, 10, 40)
-    hctx.fillText(`Speed: ${ship.speed().toFixed(0)} / ${ship.maxSpeed}`, 10, 60)
+  // Lifecycle helpers wired with state-pushing callbacks (avoids circular imports
+  // between lifecycle.ts and the state classes).
+  function enterPlaying(): void {
+    // Idempotent: ignore re-entry while ctx.ship is already populated.
+    if (ctx.ship) return
+    spawnInitialWorld(ctx)
+    ctx.screenStack.push(makeGameHUD())
   }
 
-  const loop = createGameLoop(config.gameplay.physics.timestep, {
-    fixedUpdate(_dt) {
-      if (!screenStack.paused) {
-        ship.applyControls(input)
-        applyGravity(registry, 50000, 'star')
-        rapierWorld.step(eventQueue)
-        drainCollisionEvents(rapierWorld, eventQueue, registry, events,
-                             config.gameplay.collision.event_threshold)
-        ship.clampSpeed()
-      }
-      screenStack.update(_dt)
-    },
-    render(_interpolation) {
-      camera.setTarget(ship.position().x, ship.position().y)
-      camera.update(1 / 60)
-      renderer.renderBodies(registry, ctx.camera, ship)
-      renderHUD()
-    },
+  function exitToMainMenu(): void {
+    while (!ctx.screenStack.isEmpty) ctx.screenStack.pop()
+    despawnAll(ctx)
+    ctx.screenStack.push(makeMainMenu())
+  }
+
+  function pushPauseMenu(): void {
+    ctx.screenStack.push(new PauseMenu({
+      onResume: () => ctx.screenStack.pop(),
+      onQuitToMain: exitToMainMenu,
+    }))
+  }
+
+  function makeGameHUD(): GameHUD {
+    return new GameHUD(
+      {
+        bodyCount: () => ctx.registry.all().length,
+        shipSpeed: () => ctx.ship?.speed() ?? 0,
+        shipMaxSpeed: () => ctx.ship?.maxSpeed ?? 0,
+        shipPosition: () => ctx.ship?.position() ?? { x: 0, y: 0 },
+      },
+      { onPause: pushPauseMenu },
+    )
+  }
+
+  function makeMainMenu(): MainMenu {
+    return new MainMenu({
+      onStart: () => {
+        ctx.soundEngine.init(ctx.config.sounds)
+        ctx.soundEngine.subscribeTo(ctx.events)
+        ctx.screenStack.pop()
+        enterPlaying()
+      },
+      onQuit: () => window.close(),
+    })
+  }
+
+  // Input dispatch: ScreenStack first, then InputManager (poll-based gameplay).
+  window.addEventListener('keydown', e => {
+    const key = e.key.toLowerCase()
+    if (ctx.screenStack.handleKey(key)) e.preventDefault()
+    ctx.input.handleKeyDown(e)
+  })
+  window.addEventListener('keyup', e => ctx.input.handleKeyUp(e))
+
+  // Camera shake on ship-involved collisions.
+  ctx.events.on('COLLISION', e => {
+    const tags = Array.isArray(e.tags) ? (e.tags as Array<string | undefined>) : undefined
+    if (!tags?.includes('ship')) return
+    ctx.camera.shake(Math.min((e.energy as number) / 500, 1.0))
   })
 
-  loop.start()
+  // Boot route.
+  const dev = new URLSearchParams(location.search).has('dev')
+  if (dev) {
+    enterPlaying()
+    // First keydown unlocks audio.
+    const onFirstKey = (): void => {
+      ctx.soundEngine.init(ctx.config.sounds)
+      ctx.soundEngine.subscribeTo(ctx.events)
+      window.removeEventListener('keydown', onFirstKey)
+    }
+    window.addEventListener('keydown', onFirstKey)
+  } else {
+    ctx.screenStack.push(makeMainMenu())
+  }
+
+  createGameLoop(config.gameplay.physics.timestep, {
+    fixedUpdate(dt) {
+      if (!ctx.screenStack.paused && ctx.ship) {
+        ctx.ship.applyControls(ctx.input)
+        applyGravity(ctx.registry, 50000, 'star')
+        ctx.rapierWorld.step(ctx.eventQueue)
+        drainCollisionEvents(
+          ctx.rapierWorld, ctx.eventQueue, ctx.registry,
+          ctx.events, config.gameplay.collision.event_threshold,
+        )
+        ctx.ship.clampSpeed()
+        updateAudio(ctx)
+      }
+      ctx.screenStack.update(dt)
+    },
+    render(_alpha) {
+      const target = ctx.ship?.position() ?? { x: 0, y: 0 }
+      ctx.camera.setTarget(target.x, target.y)
+      ctx.camera.update(1 / 60)
+      ctx.renderer.renderBodies(ctx.registry, ctx.camera, ctx.ship)
+
+      const c2d = hudCanvas.getContext('2d')!
+      const w = app.screen.width
+      const h = app.screen.height
+      if (hudCanvas.width !== w) hudCanvas.width = w
+      if (hudCanvas.height !== h) hudCanvas.height = h
+      c2d.clearRect(0, 0, w, h)
+      ctx.screenStack.render(c2d, w, h)
+    },
+  }).start()
 }
 
 main()

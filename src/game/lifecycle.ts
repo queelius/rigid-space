@@ -91,6 +91,8 @@ export function despawnAll(ctx: GameContext): void {
   for (const id of ids) {
     ctx.registry.remove(ctx.rapierWorld, id)
   }
+  // Drain any pending collision events so they don't leak into the next session.
+  ctx.eventQueue.drainCollisionEvents(() => {})
   ctx.ship = undefined
   ctx.camera.x = 0
   ctx.camera.y = 0
