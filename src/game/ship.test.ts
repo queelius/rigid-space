@@ -31,7 +31,15 @@ describe('Ship', () => {
   function makeShip(): Ship {
     const grid = makeShipGrid()
     const spawned = spawnComposite(world, grid, 0, 0, 0, 0, 10)
-    return new Ship(0, spawned, { thrust_strength: 500, rotation_rate: 12, cannon: { mass: 1, speed: 400 } })
+    return new Ship(0, spawned, {
+      thrust_strength: 500,
+      rotation_rate: 12,
+      max_speed: 250,
+      linear_damping: 0,
+      angular_damping: 5,
+      reverse_thrust_factor: 0.5,
+      cannon: { mass: 1, speed: 400 },
+    })
   }
 
   it('reads position from Rapier body', () => {

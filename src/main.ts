@@ -46,7 +46,7 @@ async function main() {
   // 5. Spawn star (1x1 EXOTIC, kinematic, ball collider)
   const starGrid = new GridComposite(1, 1)
   starGrid.set(0, 0, Type.EXOTIC)
-  const starSpawned = spawnComposite(rapierWorld, starGrid, 0, 0, 0, 0, 50, true)
+  const starSpawned = spawnComposite(rapierWorld, starGrid, 0, 0, 0, 0, 50, { kinematic: true })
   // Replace cuboid with ball collider for circular star
   const starCuboid = starSpawned.colliderMap.get('0,0')!
   rapierWorld.removeCollider(starCuboid, false)

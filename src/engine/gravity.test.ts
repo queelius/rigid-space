@@ -26,7 +26,7 @@ describe('applyGravity', () => {
   it('attracts dynamic body toward attractor-tagged body', () => {
     const registry = new BodyRegistry()
     const starGrid = makeGrid1x1(Type.EXOTIC)
-    const starSpawned = spawnComposite(world, starGrid, 0, 0, 0, 0, 10, true)
+    const starSpawned = spawnComposite(world, starGrid, 0, 0, 0, 0, 10, { kinematic: true })
     registry.add('star', starSpawned)
 
     const rockGrid = makeGrid1x1(Type.ROCK)
@@ -43,7 +43,7 @@ describe('applyGravity', () => {
   it('does not move kinematic bodies', () => {
     const registry = new BodyRegistry()
     const starGrid = makeGrid1x1(Type.EXOTIC)
-    const starSpawned = spawnComposite(world, starGrid, 0, 0, 0, 0, 10, true)
+    const starSpawned = spawnComposite(world, starGrid, 0, 0, 0, 0, 10, { kinematic: true })
     registry.add('star', starSpawned)
 
     const rockGrid = makeGrid1x1(Type.ROCK)
@@ -60,7 +60,7 @@ describe('applyGravity', () => {
   it('applies stronger force at closer distance', () => {
     const registry = new BodyRegistry()
     const starGrid = makeGrid1x1(Type.EXOTIC)
-    registry.add('star', spawnComposite(world, starGrid, 0, 0, 0, 0, 10, true))
+    registry.add('star', spawnComposite(world, starGrid, 0, 0, 0, 0, 10, { kinematic: true }))
 
     const nearGrid = makeGrid1x1(Type.ROCK)
     const nearSpawned = spawnComposite(world, nearGrid, 50, 0, 0, 0, 10)
@@ -81,7 +81,7 @@ describe('applyGravity', () => {
   it('skips bodies closer than minimum distance', () => {
     const registry = new BodyRegistry()
     const starGrid = makeGrid1x1(Type.EXOTIC)
-    registry.add('star', spawnComposite(world, starGrid, 0, 0, 0, 0, 10, true))
+    registry.add('star', spawnComposite(world, starGrid, 0, 0, 0, 0, 10, { kinematic: true }))
 
     const rockGrid = makeGrid1x1(Type.ROCK)
     const rockSpawned = spawnComposite(world, rockGrid, 1, 0, 0, 0, 10)

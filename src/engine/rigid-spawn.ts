@@ -22,6 +22,13 @@ export interface SpawnedBody {
   cellScale: number
 }
 
+export interface SpawnOptions {
+  kinematic?: boolean
+  linearDamping?: number
+  angularDamping?: number
+  enableCollisionEvents?: boolean
+}
+
 /**
  * Spawn a grid composite as a compound rigid body.
  * Each filled cell gets a box collider at the cell's offset from center.
@@ -34,7 +41,7 @@ export function spawnComposite(
   vx = 0,
   vy = 0,
   cellScale = 10,
-  kinematic = false,
+  opts: SpawnOptions = {},
 ): SpawnedBody {
   // Compute center of mass
   let totalMass = 0
@@ -57,9 +64,11 @@ export function spawnComposite(
   }
 
   // Create rigid body
-  const desc = kinematic
+  let desc = opts.kinematic
     ? RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(x, y)
     : RAPIER.RigidBodyDesc.dynamic().setTranslation(x, y).setLinvel(vx, vy)
+  if (opts.linearDamping !== undefined) desc = desc.setLinearDamping(opts.linearDamping)
+  if (opts.angularDamping !== undefined) desc = desc.setAngularDamping(opts.angularDamping)
   const body = world.createRigidBody(desc)
 
   // Create one box collider per filled cell, offset from COM
@@ -75,10 +84,14 @@ export function spawnComposite(
       const localY = (gy - grid.height / 2 + 0.5) * cellScale - comY
       const mass = typeProps(cell.type).defaultMass
 
-      const colliderDesc = RAPIER.ColliderDesc.cuboid(halfCell, halfCell)
+      let colliderDesc = RAPIER.ColliderDesc.cuboid(halfCell, halfCell)
         .setTranslation(localX, localY)
         .setDensity(mass / (cellScale * cellScale))
         .setRestitution(0.3)
+
+      if (opts.enableCollisionEvents) {
+        colliderDesc = colliderDesc.setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS)
+      }
 
       const collider = world.createCollider(colliderDesc, body)
       colliderMap.set(`${gx},${gy}`, collider)

@@ -45,7 +45,7 @@ describe('spawnComposite', () => {
   it('kinematic body is kinematic', () => {
     const grid = new GridComposite(1, 1)
     grid.set(0, 0, Type.EXOTIC)
-    const spawned = spawnComposite(world, grid, 0, 0, 0, 0, 10, true)
+    const spawned = spawnComposite(world, grid, 0, 0, 0, 0, 10, { kinematic: true })
     expect(spawned.body.isKinematic()).toBe(true)
   })
 
@@ -94,5 +94,49 @@ describe('removeCell', () => {
     grid.set(0, 0, Type.ROCK)
     const spawned = spawnComposite(world, grid, 0, 0, 0, 0, 10)
     expect(removeCell(world, spawned, 1, 1)).toBe(false)
+  })
+})
+
+describe('spawnComposite options', () => {
+  let world: RAPIER.World
+
+  beforeAll(async () => {
+    await RAPIER.init()
+  })
+
+  beforeEach(() => {
+    world = new RAPIER.World(new RAPIER.Vector2(0, 0))
+  })
+
+  function unitGrid(): GridComposite {
+    const g = new GridComposite(1, 1)
+    g.set(0, 0, Type.ROCK)
+    return g
+  }
+
+  it('linearDamping option propagates to body', () => {
+    const spawned = spawnComposite(world, unitGrid(), 0, 0, 0, 0, 10, { linearDamping: 1.5 })
+    expect(spawned.body.linearDamping()).toBeCloseTo(1.5, 5)
+  })
+
+  it('angularDamping option propagates to body', () => {
+    const spawned = spawnComposite(world, unitGrid(), 0, 0, 0, 0, 10, { angularDamping: 5 })
+    expect(spawned.body.angularDamping()).toBeCloseTo(5, 5)
+  })
+
+  it('enableCollisionEvents sets ActiveEvents on each collider', () => {
+    const grid = new GridComposite(2, 1)
+    grid.set(0, 0, Type.ROCK); grid.set(1, 0, Type.ROCK)
+    const spawned = spawnComposite(world, grid, 0, 0, 0, 0, 10, { enableCollisionEvents: true })
+    for (const c of spawned.colliderMap.values()) {
+      expect(c.activeEvents()).toBe(RAPIER.ActiveEvents.COLLISION_EVENTS)
+    }
+  })
+
+  it('omitting opts produces dynamic body with zero damping (default)', () => {
+    const spawned = spawnComposite(world, unitGrid(), 0, 0, 0, 0, 10)
+    expect(spawned.body.isKinematic()).toBe(false)
+    expect(spawned.body.linearDamping()).toBeCloseTo(0, 5)
+    expect(spawned.body.angularDamping()).toBeCloseTo(0, 5)
   })
 })
