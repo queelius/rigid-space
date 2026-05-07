@@ -1,4 +1,5 @@
 import type { SoundsConfig, EventSoundConfig } from '../config/loader'
+import type { EventBus } from '../engine/events'
 
 export class SoundEngine {
   private ctx: AudioContext | null = null
@@ -8,6 +9,8 @@ export class SoundEngine {
   // Ship position for spatial audio
   shipX = 0
   shipY = 0
+
+  private _subscribed = false
 
   // Continuous sounds — keyed by config name (e.g. "thrust")
   private continuousOscs: Map<string, { osc: OscillatorNode; gain: GainNode }> = new Map()
@@ -29,6 +32,21 @@ export class SoundEngine {
     this.masterGain.connect(this.ctx.destination)
 
     this._initAmbient()
+  }
+
+  /** Subscribe to all event types declared in sounds.yaml. Must be called after init. Idempotent. */
+  subscribeTo(bus: EventBus): void {
+    if (!this.config) {
+      throw new Error('SoundEngine.subscribeTo: init() must be called before subscribeTo()')
+    }
+    if (this._subscribed) return
+    this._subscribed = true
+    for (const eventType of Object.keys(this.config.events)) {
+      bus.on(eventType, e => {
+        const energy = typeof e.energy === 'number' ? e.energy : undefined
+        this.playEvent(eventType, e.x, e.y, energy)
+      })
+    }
   }
 
   // ── Spatial volume ──
