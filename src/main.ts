@@ -1,5 +1,6 @@
 import RAPIER from '@dimforge/rapier2d-compat'
-import { Application } from 'pixi.js'
+import { Application, Graphics } from 'pixi.js'
+import { StarField } from './render/star-field'
 import { loadConfig } from './config/loader'
 import { applyTypeConfig } from './engine/types'
 import { BodyRegistry } from './engine/body-registry'
@@ -36,6 +37,10 @@ async function main(): Promise<void> {
 
   const input = new InputManager()
   await input.loadConfig()
+
+  const starGfx = new Graphics()
+  app.stage.addChildAt(starGfx, 0)
+  const starField = new StarField()
 
   const ctx: GameContext = {
     app,
@@ -155,6 +160,7 @@ async function main(): Promise<void> {
       const target = ctx.ship?.position() ?? { x: 0, y: 0 }
       ctx.camera.setTarget(target.x, target.y)
       ctx.camera.update(1 / 60)
+      starField.render(starGfx, ctx.camera, app.screen.width, app.screen.height)
       ctx.renderer.renderBodies(ctx.registry, ctx.camera, ctx.ship)
 
       const c2d = hudCanvas.getContext('2d')!
