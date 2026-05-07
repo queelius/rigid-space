@@ -142,7 +142,7 @@ async function main() {
     render(_interpolation) {
       camera.setTarget(ship.position().x, ship.position().y)
       camera.update(1 / 60)
-      renderer.renderBodies(registry, ctx.camera)
+      renderer.renderBodies(registry, ctx.camera, ship)
       renderHUD()
     },
   })

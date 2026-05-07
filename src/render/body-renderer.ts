@@ -1,9 +1,11 @@
 import { Graphics, Application } from 'pixi.js'
 import type { BodyRegistry, RegistryEntry } from '../engine/body-registry'
 import { typeProps } from '../engine/types'
+import type { Camera } from '../game/camera'
+import type { Ship } from '../game/ship'
 
 export interface BodyRenderer {
-  renderBodies(registry: BodyRegistry, camera: { x: number; y: number; zoom: number }): void
+  renderBodies(registry: BodyRegistry, camera: Camera, ship?: Ship): void
   onBodyAdded(entry: RegistryEntry): void
   onBodyRemoved(id: number): void
   resize(width: number, height: number): void
@@ -44,12 +46,30 @@ export class GraphicsBodyRenderer implements BodyRenderer {
     app.stage.addChild(this.gfx)
   }
 
-  renderBodies(registry: BodyRegistry, camera: { x: number; y: number; zoom: number }): void {
+  renderBodies(registry: BodyRegistry, camera: Camera, ship?: Ship): void {
     const w = this.app.screen.width
     const h = this.app.screen.height
-    const { x: camX, y: camY, zoom } = camera
+    const camX = camera.effectiveX
+    const camY = camera.effectiveY
+    const zoom = camera.zoom
 
     this.gfx.clear()
+
+    // Thruster glow: drawn before bodies so the ship hull paints over its center.
+    // Offset is placed in the opposite direction of facing (behind the ship).
+    if (ship?.isThrusting()) {
+      const sp = ship.position()
+      const sx = w / 2 + (sp.x - camX) * zoom
+      const sy = h / 2 - (sp.y - camY) * zoom
+      const angle = ship.rotation()
+      const offset = 25 * zoom
+      this.gfx.ellipse(
+        sx + Math.sin(angle) * offset,
+        sy - Math.cos(angle) * offset,
+        12 * zoom,
+        20 * zoom,
+      ).fill({ color: 0xff8833, alpha: 0.6 })
+    }
 
     for (const entry of registry) {
       const body = entry.spawned.body
