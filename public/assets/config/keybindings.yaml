@@ -1,8 +1,8 @@
 keybindings:
-  thrust_forward: w
-  thrust_backward: s
-  rotate_left: a
-  rotate_right: d
+  thrust_forward: [w, arrowup]
+  thrust_backward: [s, arrowdown]
+  rotate_left: [a, arrowleft]
+  rotate_right: [d, arrowright]
   fire_cannon: ' '
   orbit_lock: o
   hyperspace: h

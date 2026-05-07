@@ -58,7 +58,7 @@ describe('Ship', () => {
     const ship = makeShip()
     const input = new InputManager()
     // Manually set up the action mapping and simulate key held
-    input['actionToKey'].set('thrust_forward', 'w')
+    input['actionToKeys'].set('thrust_forward', ['w'])
     input['keyHeld']['w'] = true
 
     ship.applyControls(input)
@@ -68,17 +68,16 @@ describe('Ship', () => {
     expect(vel.y).toBeGreaterThan(0)
   })
 
-  it('applyControls applies torque when rotate_left is held', () => {
+  it('applyControls applies negative angular velocity when rotate_left is held', () => {
     const ship = makeShip()
     const input = new InputManager()
-    input['actionToKey'].set('rotate_left', 'a')
+    input['actionToKeys'].set('rotate_left', ['a'])
     input['keyHeld']['a'] = true
 
     ship.applyControls(input)
-    world.step()
 
     const angvel = ship.spawned.body.angvel()
-    expect(angvel).not.toBe(0)
+    expect(angvel).toBe(-12)
   })
 
   it('rotation returns body angle', () => {
@@ -120,7 +119,7 @@ describe('Ship', () => {
   it('isThrusting becomes true when thrust_forward is held', () => {
     const ship = makeShip()
     const input = new InputManager()
-    input['actionToKey'].set('thrust_forward', 'w')
+    input['actionToKeys'].set('thrust_forward', ['w'])
     input['keyHeld']['w'] = true
     ship.applyControls(input)
     expect(ship.isThrusting()).toBe(true)
@@ -129,11 +128,22 @@ describe('Ship', () => {
   it('isThrusting becomes false when thrust released', () => {
     const ship = makeShip()
     const input = new InputManager()
-    input['actionToKey'].set('thrust_forward', 'w')
+    input['actionToKeys'].set('thrust_forward', ['w'])
     input['keyHeld']['w'] = true
     ship.applyControls(input)
     input['keyHeld']['w'] = false
     ship.applyControls(input)
     expect(ship.isThrusting()).toBe(false)
+  })
+
+  it('applyControls zeros angular velocity when no rotate key held', () => {
+    const ship = makeShip()
+    const input = new InputManager()
+    // Pre-condition: ship has nonzero angvel
+    ship.spawned.body.setAngvel(5, true)
+    expect(ship.spawned.body.angvel()).toBeCloseTo(5, 5)
+    // No rotate_left or rotate_right is held
+    ship.applyControls(input)
+    expect(ship.spawned.body.angvel()).toBeCloseTo(0, 5)
   })
 })

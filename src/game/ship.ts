@@ -7,7 +7,7 @@ export class Ship {
   readonly registryId: number
   readonly spawned: SpawnedBody
   thrustStrength: number
-  rotationRate: number
+  rotationRate: number       // angular velocity in rad/s (instant fixed-rate rotation)
   maxSpeed: number
   reverseThrustFactor: number
 
@@ -39,11 +39,18 @@ export class Ship {
       const rev = this.thrustStrength * this.reverseThrustFactor
       body.addForce(new RAPIER.Vector2(-fx * rev, -fy * rev), true)
     }
+    // Instant fixed-rate rotation (not torque). Sign matches the previous
+    // torque convention so visual direction is unchanged: rotate_left turns
+    // counterclockwise on screen, rotate_right turns clockwise.
     if (input.isAction('rotate_left')) {
-      body.addTorque(-this.rotationRate, true)
-    }
-    if (input.isAction('rotate_right')) {
-      body.addTorque(this.rotationRate, true)
+      body.setAngvel(-this.rotationRate, true)
+    } else if (input.isAction('rotate_right')) {
+      body.setAngvel(this.rotationRate, true)
+    } else {
+      // No rotate key held: snap angular velocity to zero so rotation stops
+      // immediately on key release. This overrides angular damping and any
+      // residual angvel from collisions, by design (arcade feel).
+      body.setAngvel(0, true)
     }
   }
 

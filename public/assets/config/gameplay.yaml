@@ -1,6 +1,6 @@
 ship:
   thrust_strength: 2000        # raised from 500; tune empirically in Task 15
-  rotation_rate: 40            # raised from 12; tune empirically in Task 15
+  rotation_rate: 3             # rad/s; was torque, now instant angular velocity
   max_speed: 250               # NEW: hard cap on linear velocity magnitude
   linear_damping: 0            # NEW: 0 = Newtonian drift
   angular_damping: 5           # NEW: high so rotation snaps to halt on key release
