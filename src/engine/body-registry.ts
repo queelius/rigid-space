@@ -5,15 +5,16 @@ export interface RegistryEntry {
   id: number
   tag: string
   spawned: SpawnedBody
+  metadata?: { proximityKey?: string; radius?: number }
 }
 
 export class BodyRegistry {
   private entries = new Map<number, RegistryEntry>()
   private nextId = 0
 
-  add(tag: string, spawned: SpawnedBody): number {
+  add(tag: string, spawned: SpawnedBody, metadata?: RegistryEntry['metadata']): number {
     const id = this.nextId++
-    this.entries.set(id, { id, tag, spawned })
+    this.entries.set(id, { id, tag, spawned, metadata })
     return id
   }
 
@@ -44,6 +45,13 @@ export class BodyRegistry {
   firstByTag(tag: string): RegistryEntry | undefined {
     for (const entry of this.entries.values()) {
       if (entry.tag === tag) return entry
+    }
+    return undefined
+  }
+
+  findByBody(body: RAPIER.RigidBody): RegistryEntry | undefined {
+    for (const entry of this.entries.values()) {
+      if (entry.spawned.body === body) return entry
     }
     return undefined
   }

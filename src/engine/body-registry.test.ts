@@ -92,4 +92,31 @@ describe('BodyRegistry', () => {
     const tags = [...registry].map(e => e.tag)
     expect(tags).toEqual(['a', 'b'])
   })
+
+  it('findByBody returns matching entry', () => {
+    const spawned = spawn()
+    const id = registry.add('ship', spawned)
+    const entry = registry.findByBody(spawned.body)
+    expect(entry).toBeDefined()
+    expect(entry!.id).toBe(id)
+    expect(entry!.tag).toBe('ship')
+  })
+
+  it('findByBody returns undefined for unknown body', () => {
+    registry.add('a', spawn())
+    const unregistered = spawn()    // body exists in the test world but was never added to registry
+    expect(registry.findByBody(unregistered.body)).toBeUndefined()
+  })
+
+  it('add accepts metadata as third argument', () => {
+    const id = registry.add('star', spawn(), { proximityKey: 'star', radius: 50 })
+    const entry = registry.get(id)
+    expect(entry!.metadata).toEqual({ proximityKey: 'star', radius: 50 })
+  })
+
+  it('metadata is undefined when not provided', () => {
+    const id = registry.add('asteroid', spawn())
+    const entry = registry.get(id)
+    expect(entry!.metadata).toBeUndefined()
+  })
 })
