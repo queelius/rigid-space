@@ -1,6 +1,10 @@
 ship:
-  thrust_strength: 500
-  rotation_rate: 12
+  thrust_strength: 2000        # raised from 500; tune empirically in Task 15
+  rotation_rate: 40            # raised from 12; tune empirically in Task 15
+  max_speed: 250               # NEW: hard cap on linear velocity magnitude
+  linear_damping: 0            # NEW: 0 = Newtonian drift
+  angular_damping: 5           # NEW: high so rotation snaps to halt on key release
+  reverse_thrust_factor: 0.5   # NEW: was hardcoded; expose for tuning
   cannon:
     mass: 1.0
     speed: 400

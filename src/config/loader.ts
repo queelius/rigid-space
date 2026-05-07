@@ -164,6 +164,10 @@ export interface GameplayShipCannonConfig {
 export interface GameplayShipConfig {
   thrust_strength: number
   rotation_rate: number
+  max_speed: number
+  linear_damping: number
+  angular_damping: number
+  reverse_thrust_factor: number
   cannon: GameplayShipCannonConfig
 }
 
