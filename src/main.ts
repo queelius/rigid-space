@@ -12,17 +12,17 @@ import { ScreenStack } from './game/screen-stack'
 import { EventBus } from './engine/events'
 import { GraphicsBodyRenderer } from './render/body-renderer'
 import { createGameLoop } from './game/game-loop'
+import { Camera } from './game/camera'
+import { SoundEngine } from './game/sound'
+import { drainCollisionEvents } from './game/collision-events'
 import type { GameContext } from './game/game-context'
 
 async function main() {
-  // 1. Init Rapier WASM
   await RAPIER.init()
 
-  // 2. Load config, apply type properties
   const config = await loadConfig()
   applyTypeConfig(config.types)
 
-  // 3. Init PixiJS
   const app = new Application()
   await app.init({
     canvas: document.getElementById('game') as HTMLCanvasElement,
@@ -32,8 +32,10 @@ async function main() {
     preference: 'webgl',
   })
 
-  // 4. Create core systems
+  const hudCanvas = document.getElementById('hud') as HTMLCanvasElement
+
   const rapierWorld = new RAPIER.World(new RAPIER.Vector2(0, 0))
+  const eventQueue = new RAPIER.EventQueue(true)
   const registry = new BodyRegistry()
   const input = new InputManager()
   await input.loadConfig()
@@ -42,34 +44,42 @@ async function main() {
   const screenStack = new ScreenStack()
   const events = new EventBus()
   const renderer = new GraphicsBodyRenderer(app)
+  const camera = new Camera()
+  const soundEngine = new SoundEngine()
 
-  // 5. Spawn star (1x1 EXOTIC, kinematic, ball collider)
+  // Spawn star: 1x1 EXOTIC, kinematic. Replace cuboid with ball collider that has
+  // ActiveEvents.COLLISION_EVENTS so ship-vs-star bumps fire COLLISION events.
   const starGrid = new GridComposite(1, 1)
   starGrid.set(0, 0, Type.EXOTIC)
   const starSpawned = spawnComposite(rapierWorld, starGrid, 0, 0, 0, 0, 50, { kinematic: true })
-  // Replace cuboid with ball collider for circular star
   const starCuboid = starSpawned.colliderMap.get('0,0')!
   rapierWorld.removeCollider(starCuboid, false)
   rapierWorld.createCollider(
-    RAPIER.ColliderDesc.ball(50).setDensity(100),
+    RAPIER.ColliderDesc.ball(50)
+      .setDensity(100)
+      .setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS),
     starSpawned.body,
   )
   starSpawned.colliderMap.delete('0,0')
-  registry.add('star', starSpawned)
+  registry.add('star', starSpawned, { proximityKey: 'star', radius: 50 })
 
-  // 6. Spawn ship (3x5 grid)
+  // Spawn ship at (500, 0) at rest with SC2 damping config
   const shipGrid = new GridComposite(3, 5)
-  shipGrid.set(1, 4, Type.COCKPIT)   // nose
-  shipGrid.set(0, 2, Type.THRUSTER)  // left engine
-  shipGrid.set(2, 2, Type.THRUSTER)  // right engine
-  shipGrid.set(1, 2, Type.REACTOR)   // center
+  shipGrid.set(1, 4, Type.COCKPIT)
+  shipGrid.set(0, 2, Type.THRUSTER)
+  shipGrid.set(2, 2, Type.THRUSTER)
+  shipGrid.set(1, 2, Type.REACTOR)
   shipGrid.set(1, 1, Type.FUEL)
   shipGrid.set(1, 0, Type.FUEL)
-  const shipSpawned = spawnComposite(rapierWorld, shipGrid, 300, 0, 0, 30, 10)
+  const shipSpawned = spawnComposite(rapierWorld, shipGrid, 500, 0, 0, 0, 10, {
+    linearDamping: config.gameplay.ship.linear_damping,
+    angularDamping: config.gameplay.ship.angular_damping,
+    enableCollisionEvents: true,
+  })
   const shipId = registry.add('ship', shipSpawned)
   const ship = new Ship(shipId, shipSpawned, config.gameplay.ship)
 
-  // 7. Spawn asteroids
+  // Spawn 20 asteroids in rough orbits, with collision events enabled
   for (let i = 0; i < 20; i++) {
     const angle = Math.random() * Math.PI * 2
     const r = 150 + Math.random() * 400
@@ -78,8 +88,7 @@ async function main() {
     const v = 20 + Math.random() * 15
     const vx = -Math.sin(angle) * v
     const vy = Math.cos(angle) * v
-    const size = 1 + Math.floor(Math.random() * 3) // 1x1 to 3x3
-
+    const size = 1 + Math.floor(Math.random() * 3)
     const grid = new GridComposite(size, size)
     for (let gy = 0; gy < size; gy++) {
       for (let gx = 0; gx < size; gx++) {
@@ -88,48 +97,51 @@ async function main() {
         }
       }
     }
-    const spawned = spawnComposite(rapierWorld, grid, x, y, vx, vy, 8)
+    const spawned = spawnComposite(rapierWorld, grid, x, y, vx, vy, 8, {
+      enableCollisionEvents: true,
+    })
     registry.add('asteroid', spawned)
   }
 
-  // 8. Build context
   const ctx: GameContext = {
-    rapierWorld, registry, ship, input, screenStack, events, config, renderer,
-    camera: { x: 0, y: 0, zoom: 1 },
+    app, hudCanvas,
+    rapierWorld, eventQueue,
+    registry,
+    ship,                // not undefined here; menu lifecycle adds the optional path in Task 14
+    input, screenStack, events,
+    config, renderer, camera, soundEngine,
   }
 
-  // 9. HUD setup
-  const hudCanvas = document.getElementById('hud') as HTMLCanvasElement
-
+  // HUD render. This is replaced by GameHUD ScreenState in Task 14.
   function renderHUD(): void {
     const w = app.screen.width
     const h = app.screen.height
-    if (hudCanvas.width !== w || hudCanvas.height !== h) {
-      hudCanvas.width = w
-      hudCanvas.height = h
-    }
+    if (hudCanvas.width !== w) hudCanvas.width = w
+    if (hudCanvas.height !== h) hudCanvas.height = h
     const hctx = hudCanvas.getContext('2d')!
     hctx.clearRect(0, 0, w, h)
     hctx.fillStyle = '#aaa'
     hctx.font = '14px monospace'
     hctx.fillText('Rigid Space  |  Rapier2D WASM', 10, 20)
     hctx.fillText(`Bodies: ${registry.all().length}  |  WASD: fly`, 10, 40)
-    hctx.fillText(`Speed: ${ship.speed().toFixed(0)}`, 10, 60)
+    hctx.fillText(`Speed: ${ship.speed().toFixed(0)} / ${ship.maxSpeed}`, 10, 60)
   }
 
-  // 10. Start game loop
   const loop = createGameLoop(config.gameplay.physics.timestep, {
     fixedUpdate(_dt) {
       if (!screenStack.paused) {
         ship.applyControls(input)
         applyGravity(registry, 50000, 'star')
-        rapierWorld.step()
+        rapierWorld.step(eventQueue)
+        drainCollisionEvents(rapierWorld, eventQueue, registry, events,
+                             config.gameplay.collision.event_threshold)
+        ship.clampSpeed()
       }
       screenStack.update(_dt)
     },
     render(_interpolation) {
-      ctx.camera.x = ship.position().x
-      ctx.camera.y = ship.position().y
+      camera.setTarget(ship.position().x, ship.position().y)
+      camera.update(1 / 60)
       renderer.renderBodies(registry, ctx.camera)
       renderHUD()
     },
