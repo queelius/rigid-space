@@ -49,6 +49,7 @@ export class BodyRegistry {
     return undefined
   }
 
+  /** O(N) linear scan; fine for body counts under ~100. Add reverse map if scaling. */
   findByBody(body: RAPIER.RigidBody): RegistryEntry | undefined {
     for (const entry of this.entries.values()) {
       if (entry.spawned.body === body) return entry
