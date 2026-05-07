@@ -1,0 +1,130 @@
+import { describe, it, expect, beforeAll, beforeEach } from 'vitest'
+import RAPIER from '@dimforge/rapier2d-compat'
+import { spawnInitialWorld, despawnAll, updateAudio } from './lifecycle'
+import { BodyRegistry } from '../engine/body-registry'
+import { Camera } from './camera'
+import { EventBus } from '../engine/events'
+import type { GameContext } from './game-context'
+import type { GameConfig } from '../config/loader'
+
+describe('lifecycle', () => {
+  let world: RAPIER.World
+  let registry: BodyRegistry
+  let camera: Camera
+  let ctx: GameContext
+
+  beforeAll(async () => {
+    await RAPIER.init()
+  })
+
+  beforeEach(() => {
+    world = new RAPIER.World(new RAPIER.Vector2(0, 0))
+    registry = new BodyRegistry()
+    camera = new Camera()
+    // Minimal stub config; lifecycle reads only ship.* and collision.event_threshold
+    const config = {
+      gameplay: {
+        ship: {
+          thrust_strength: 2000, rotation_rate: 40, max_speed: 250,
+          linear_damping: 0, angular_damping: 5, reverse_thrust_factor: 0.5,
+          cannon: { mass: 1, speed: 400 },
+        },
+        physics: { substeps: 4, timestep: 0.016 },
+        collision: { restitution: 0.5, heat_fraction: 0.1, break_threshold: 500, event_threshold: 100 },
+      },
+    } as unknown as GameConfig
+    ctx = {
+      app: null as never, hudCanvas: null as never,
+      rapierWorld: world, eventQueue: new RAPIER.EventQueue(true),
+      registry, ship: undefined,
+      input: null as never, screenStack: null as never,
+      events: new EventBus(),
+      config, renderer: null as never, camera,
+      soundEngine: null as never,
+    }
+  })
+
+  it('spawnInitialWorld populates registry with star + ship + asteroids', () => {
+    spawnInitialWorld(ctx)
+    const all = ctx.registry.all()
+    expect(all.length).toBeGreaterThan(20)  // 1 star + 1 ship + 20 asteroids
+    expect(ctx.registry.firstByTag('star')).toBeDefined()
+    expect(ctx.registry.firstByTag('ship')).toBeDefined()
+    expect(ctx.registry.getByTag('asteroid').length).toBe(20)
+    expect(ctx.ship).toBeDefined()
+  })
+
+  it('star has proximityKey metadata', () => {
+    spawnInitialWorld(ctx)
+    const star = ctx.registry.firstByTag('star')!
+    expect(star.metadata?.proximityKey).toBe('star')
+    expect(star.metadata?.radius).toBe(50)
+  })
+
+  it('all asteroids have non-zero mass (no empty-grid ghosts)', () => {
+    spawnInitialWorld(ctx)
+    for (const asteroid of ctx.registry.getByTag('asteroid')) {
+      expect(asteroid.spawned.totalMass).toBeGreaterThan(0)
+    }
+  })
+
+  it('despawnAll clears registry and ship', () => {
+    spawnInitialWorld(ctx)
+    despawnAll(ctx)
+    expect(ctx.registry.all()).toHaveLength(0)
+    expect(ctx.ship).toBeUndefined()
+  })
+
+  it('despawnAll is idempotent on empty world', () => {
+    despawnAll(ctx)
+    expect(ctx.registry.all()).toHaveLength(0)
+  })
+
+  it('despawnAll resets camera to origin', () => {
+    spawnInitialWorld(ctx)
+    ctx.camera.x = 100
+    ctx.camera.y = 200
+    despawnAll(ctx)
+    expect(ctx.camera.x).toBe(0)
+    expect(ctx.camera.y).toBe(0)
+  })
+
+  it('updateAudio updates soundEngine spatial position and thrust state', () => {
+    const setContinuousCalls: Array<[string, boolean]> = []
+    const updateProximityCalls: Array<{ key: string; dist: number; mass: number; radius?: number }> = []
+    const fakeSound = {
+      shipX: 0,
+      shipY: 0,
+      setContinuous: (name: string, active: boolean) => { setContinuousCalls.push([name, active]) },
+      updateProximity: (key: string, dist: number, mass: number, radius?: number) => {
+        updateProximityCalls.push({ key, dist, mass, radius })
+      },
+    }
+    ctx.soundEngine = fakeSound as unknown as GameContext['soundEngine']
+    spawnInitialWorld(ctx)
+
+    // Ship is at (500, 0). Update audio.
+    updateAudio(ctx)
+
+    expect(fakeSound.shipX).toBe(500)
+    expect(fakeSound.shipY).toBe(0)
+    expect(setContinuousCalls).toContainEqual(['thrust', false])
+    // Star is at origin, so distance from ship at (500, 0) is 500
+    const starCall = updateProximityCalls.find(c => c.key === 'star')
+    expect(starCall).toBeDefined()
+    expect(starCall!.dist).toBeCloseTo(500, 0)
+    expect(starCall!.radius).toBe(50)
+  })
+
+  it('updateAudio is no-op when ship is undefined', () => {
+    const setContinuousCalls: string[] = []
+    ctx.soundEngine = {
+      shipX: 0, shipY: 0,
+      setContinuous: (name: string) => { setContinuousCalls.push(name) },
+      updateProximity: () => {},
+    } as unknown as GameContext['soundEngine']
+    // ship stays undefined
+    updateAudio(ctx)
+    expect(setContinuousCalls).toEqual([])
+  })
+})
