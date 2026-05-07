@@ -6,7 +6,10 @@ import type { EventBus } from '../engine/events'
  * Drain Rapier's collision event queue and emit COLLISION events
  * on the EventBus when impact energy meets the threshold.
  *
- * Energy = 0.5 * (m1 + m2) * |v1 - v2|^2 (kinetic-energy-shaped scalar).
+ * Energy = 0.5 * m_reduced * |v1 - v2|^2 where m_reduced = m1*m2/(m1+m2).
+ * Reduced-mass form ensures kinematic bodies (e.g. the star) do not dominate
+ * the energy; their effectively-infinite mass collapses m_reduced to just the
+ * dynamic body's mass.
  * Position = midpoint of body translations.
  *
  * Known limitation: linvel() is read post-step, so the relative speed reflects the
@@ -39,7 +42,13 @@ export function drainCollisionEvents(
     const dvx = v1.x - v2.x
     const dvy = v1.y - v2.y
     const relSpeed = Math.sqrt(dvx * dvx + dvy * dvy)
-    const energy = 0.5 * (b1.mass() + b2.mass()) * relSpeed * relSpeed
+    const m1 = b1.mass()
+    const m2 = b2.mass()
+    // Reduced-mass form of kinetic energy, m_reduced = m1*m2/(m1+m2).
+    // For kinematic bodies (effectively infinite mass), m_reduced -> the dynamic body's mass.
+    const sumMass = m1 + m2
+    const reducedMass = sumMass > 0 ? (m1 * m2) / sumMass : 0
+    const energy = 0.5 * reducedMass * relSpeed * relSpeed
     if (energy < energyThreshold) return
 
     const t1 = b1.translation()

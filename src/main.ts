@@ -69,6 +69,9 @@ async function main(): Promise<void> {
   }
 
   function pushPauseMenu(): void {
+    // Silence thrust loop immediately on pause; next unpaused fixedUpdate tick
+    // will re-sync from ship.isThrusting() if the key is still held.
+    ctx.soundEngine.setContinuous('thrust', false)
     ctx.screenStack.push(new PauseMenu({
       onResume: () => ctx.screenStack.pop(),
       onQuitToMain: exitToMainMenu,
@@ -101,8 +104,12 @@ async function main(): Promise<void> {
 
   // Input dispatch: ScreenStack first, then InputManager (poll-based gameplay).
   window.addEventListener('keydown', e => {
-    const key = e.key.toLowerCase()
-    if (ctx.screenStack.handleKey(key)) e.preventDefault()
+    // Filter auto-repeats from menu/state navigation, but still let
+    // InputManager record held-key state for gameplay polling.
+    if (!e.repeat) {
+      const key = e.key.toLowerCase()
+      if (ctx.screenStack.handleKey(key)) e.preventDefault()
+    }
     ctx.input.handleKeyDown(e)
   })
   window.addEventListener('keyup', e => ctx.input.handleKeyUp(e))
