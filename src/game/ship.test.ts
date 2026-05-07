@@ -68,6 +68,51 @@ describe('Ship', () => {
     expect(vel.y).toBeGreaterThan(0)
   })
 
+  it('forward thrust at rotation +pi/2 accelerates in world +X (visual right)', () => {
+    const ship = makeShip()
+    const input = new InputManager()
+    input['actionToKeys'].set('thrust_forward', ['w'])
+    input['keyHeld']['w'] = true
+    // Set body rotation to +pi/2 (renderer flips this so visual nose points +X)
+    ship.spawned.body.setRotation(Math.PI / 2, true)
+
+    ship.applyControls(input)
+    world.step()
+
+    const vel = ship.velocity()
+    expect(vel.x).toBeGreaterThan(0)
+    expect(Math.abs(vel.y)).toBeLessThan(Math.abs(vel.x) * 0.01)
+  })
+
+  it('forward thrust at rotation -pi/2 accelerates in world -X (visual left)', () => {
+    const ship = makeShip()
+    const input = new InputManager()
+    input['actionToKeys'].set('thrust_forward', ['w'])
+    input['keyHeld']['w'] = true
+    ship.spawned.body.setRotation(-Math.PI / 2, true)
+
+    ship.applyControls(input)
+    world.step()
+
+    const vel = ship.velocity()
+    expect(vel.x).toBeLessThan(0)
+    expect(Math.abs(vel.y)).toBeLessThan(Math.abs(vel.x) * 0.01)
+  })
+
+  it('reverse thrust at rotation 0 accelerates in world -Y (visual down)', () => {
+    const ship = makeShip()
+    const input = new InputManager()
+    input['actionToKeys'].set('thrust_backward', ['s'])
+    input['keyHeld']['s'] = true
+
+    ship.applyControls(input)
+    world.step()
+
+    const v = ship.velocity()
+    expect(v.y).toBeLessThan(0)
+    expect(Math.abs(v.x)).toBeLessThan(Math.abs(v.y) * 0.01)
+  })
+
   it('applyControls applies negative angular velocity when rotate_left is held', () => {
     const ship = makeShip()
     const input = new InputManager()

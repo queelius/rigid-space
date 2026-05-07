@@ -29,7 +29,12 @@ export class Ship {
 
     const body = this.spawned.body
     const angle = body.rotation()
-    const fx = -Math.sin(angle)
+    // Forward direction must match the renderer's visual orientation.
+    // Renderer rotates body coords by -rot (combined with screen Y-flip), so
+    // body local +Y at rotation r appears in world at (sin(r), cos(r)). Forward
+    // thrust uses that vector so the ship accelerates in the direction the
+    // visible nose is pointing.
+    const fx = Math.sin(angle)
     const fy = Math.cos(angle)
 
     if (fwd) {
