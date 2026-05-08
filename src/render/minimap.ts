@@ -72,7 +72,7 @@ export class Minimap {
       const dy = -(body.y - shipPos.y) * scale
       const sx = cx + dx
       const sy = cy + dy
-      if (sx < x0 || sx > x0 + this.size || sy < y0 || sy > y0 + this.size) continue
+      if (sx < x0 || sx >= x0 + this.size || sy < y0 || sy >= y0 + this.size) continue
 
       const { color, radius } = bodyMarkerStyle(body.tag)
       c2d.fillStyle = color

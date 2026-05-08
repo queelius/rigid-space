@@ -151,18 +151,22 @@ async function main(): Promise<void> {
 
   createGameLoop(config.gameplay.physics.timestep, {
     fixedUpdate(dt) {
-      if (!ctx.screenStack.paused && ctx.ship) {
-        ctx.ship.applyControls(ctx.input)
+      if (!ctx.screenStack.paused) {
+        // Zoom is camera-only and doesn't require a ship.
         if (ctx.input.isAction('zoom_in')) ctx.camera.zoomBy(Math.pow(2, dt))
         if (ctx.input.isAction('zoom_out')) ctx.camera.zoomBy(Math.pow(0.5, dt))
-        applyGravity(ctx.registry, 50000, 'star')
-        ctx.rapierWorld.step(ctx.eventQueue)
-        drainCollisionEvents(
-          ctx.rapierWorld, ctx.eventQueue, ctx.registry,
-          ctx.events, config.gameplay.collision.event_threshold,
-        )
-        ctx.ship.clampSpeed()
-        updateAudio(ctx)
+
+        if (ctx.ship) {
+          ctx.ship.applyControls(ctx.input)
+          applyGravity(ctx.registry, 50000, 'star')
+          ctx.rapierWorld.step(ctx.eventQueue)
+          drainCollisionEvents(
+            ctx.rapierWorld, ctx.eventQueue, ctx.registry,
+            ctx.events, config.gameplay.collision.event_threshold,
+          )
+          ctx.ship.clampSpeed()
+          updateAudio(ctx)
+        }
       }
       ctx.screenStack.update(dt)
     },

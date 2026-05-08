@@ -55,7 +55,6 @@ export class InputManager {
       interact: 't',
       zoom_in: '=',
       zoom_out: '-',
-      minimap_toggle: 'm',
     }
     for (const [action, value] of Object.entries(defaults)) {
       const keys = Array.isArray(value) ? value : [value]

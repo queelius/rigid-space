@@ -10,4 +10,3 @@ keybindings:
   interact: t
   zoom_in: '='
   zoom_out: '-'
-  minimap_toggle: m
