@@ -1,12 +1,17 @@
+export const MIN_ZOOM = 0.25
+export const MAX_ZOOM = 4.0
+
 /**
- * 2D camera with target-following and shake.
+ * 2D camera with target-following, smooth zoom, and shake.
  * update() runs once per render frame (not per physics tick).
  */
 export class Camera {
   x = 0
   y = 0
-  /** Direct write for now; smooth zoom not yet implemented. */
   zoom = 1
+  targetZoom = 1
+  /** Higher = snappier zoom follow. Tunable. */
+  zoomSmoothing = 8
 
   private tx = 0
   private ty = 0
@@ -19,6 +24,16 @@ export class Camera {
   private shakeOX = 0
   private shakeOY = 0
 
+  /** Clamp targetZoom to [MIN_ZOOM, MAX_ZOOM]. */
+  setTargetZoom(z: number): void {
+    this.targetZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, z))
+  }
+
+  /** Multiply targetZoom by factor and clamp. */
+  zoomBy(factor: number): void {
+    this.setTargetZoom(this.targetZoom * factor)
+  }
+
   setTarget(x: number, y: number): void {
     this.tx = x
     this.ty = y
@@ -29,6 +44,10 @@ export class Camera {
     const k = 1 - Math.exp(-this.smoothing * dt)
     this.x += (this.tx - this.x) * k
     this.y += (this.ty - this.y) * k
+
+    // Zoom lerp
+    const kz = 1 - Math.exp(-this.zoomSmoothing * dt)
+    this.zoom += (this.targetZoom - this.zoom) * kz
 
     // Shake decay
     this.shakeMag *= Math.exp(-this.shakeDecay * dt)

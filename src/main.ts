@@ -17,6 +17,7 @@ import { spawnInitialWorld, despawnAll, updateAudio } from './game/lifecycle'
 import { MainMenu } from './game/states/main-menu'
 import { GameHUD } from './game/states/game-hud'
 import { PauseMenu } from './game/states/pause-menu'
+import { Minimap } from './render/minimap'
 import type { GameContext } from './game/game-context'
 
 async function main(): Promise<void> {
@@ -84,14 +85,21 @@ async function main(): Promise<void> {
   }
 
   function makeGameHUD(): GameHUD {
+    const minimap = new Minimap()
     return new GameHUD(
       {
         bodyCount: () => ctx.registry.all().length,
         shipSpeed: () => ctx.ship?.speed() ?? 0,
         shipMaxSpeed: () => ctx.ship?.maxSpeed ?? 0,
         shipPosition: () => ctx.ship?.position() ?? { x: 0, y: 0 },
+        shipRotation: () => ctx.ship?.rotation() ?? 0,
+        bodies: () => ctx.registry.all().map(e => {
+          const t = e.spawned.body.translation()
+          return { x: t.x, y: t.y, tag: e.tag }
+        }),
       },
       { onPause: pushPauseMenu },
+      minimap,
     )
   }
 
@@ -145,6 +153,8 @@ async function main(): Promise<void> {
     fixedUpdate(dt) {
       if (!ctx.screenStack.paused && ctx.ship) {
         ctx.ship.applyControls(ctx.input)
+        if (ctx.input.isAction('zoom_in')) ctx.camera.zoomBy(Math.pow(2, dt))
+        if (ctx.input.isAction('zoom_out')) ctx.camera.zoomBy(Math.pow(0.5, dt))
         applyGravity(ctx.registry, 50000, 'star')
         ctx.rapierWorld.step(ctx.eventQueue)
         drainCollisionEvents(

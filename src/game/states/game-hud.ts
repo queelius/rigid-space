@@ -1,4 +1,5 @@
 import type { ScreenState } from '../screen-stack'
+import { Minimap, type MinimapBody } from '../../render/minimap'
 
 /** Read-only data the HUD needs. Decouples HUD from full GameContext for testability. */
 export interface GameHUDViewModel {
@@ -6,6 +7,8 @@ export interface GameHUDViewModel {
   shipSpeed(): number
   shipMaxSpeed(): number
   shipPosition(): { x: number; y: number }
+  shipRotation(): number
+  bodies(): MinimapBody[]
 }
 
 export interface GameHUDCallbacks {
@@ -18,10 +21,12 @@ export class GameHUD implements ScreenState {
 
   private vm: GameHUDViewModel
   private callbacks: GameHUDCallbacks
+  private minimap: Minimap
 
-  constructor(viewModel: GameHUDViewModel, callbacks: GameHUDCallbacks) {
+  constructor(viewModel: GameHUDViewModel, callbacks: GameHUDCallbacks, minimap?: Minimap) {
     this.vm = viewModel
     this.callbacks = callbacks
+    this.minimap = minimap ?? new Minimap()
   }
 
   update(_dt: number): void {}
@@ -35,10 +40,14 @@ export class GameHUD implements ScreenState {
       this.callbacks.onPause()
       return true
     }
+    if (key === 'm') {
+      this.minimap.toggle()
+      return true
+    }
     return false
   }
 
-  render(c2d: CanvasRenderingContext2D, _w: number, _h: number): void {
+  render(c2d: CanvasRenderingContext2D, w: number, h: number): void {
     c2d.fillStyle = '#aaaaaa'
     c2d.font = '14px monospace'
     c2d.textAlign = 'left'
@@ -47,5 +56,7 @@ export class GameHUD implements ScreenState {
     const p = this.vm.shipPosition()
     c2d.fillText(`Pos: ${p.x.toFixed(0)}, ${p.y.toFixed(0)}`, 10, 60)
     c2d.fillText(`Bodies: ${this.vm.bodyCount()}`, 10, 80)
+
+    this.minimap.render(c2d, w, h, p, this.vm.shipRotation(), this.vm.bodies())
   }
 }

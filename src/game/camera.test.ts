@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { Camera } from './camera'
+import { Camera, MIN_ZOOM, MAX_ZOOM } from './camera'
 
 describe('Camera', () => {
   let camera: Camera
@@ -76,5 +76,38 @@ describe('Camera', () => {
     camera.update(1)
     expect(camera.effectiveX).toBe(camera.x)
     expect(camera.effectiveY).toBe(camera.y)
+  })
+
+  describe('zoom', () => {
+    it('setTargetZoom clamps below MIN_ZOOM', () => {
+      camera.setTargetZoom(0.1)
+      expect(camera.targetZoom).toBe(MIN_ZOOM)
+    })
+
+    it('setTargetZoom clamps above MAX_ZOOM', () => {
+      camera.setTargetZoom(10)
+      expect(camera.targetZoom).toBe(MAX_ZOOM)
+    })
+
+    it('zoomBy multiplies targetZoom and clamps back down', () => {
+      camera.setTargetZoom(1)
+      camera.zoomBy(2)
+      expect(camera.targetZoom).toBe(2)
+      camera.zoomBy(0.5)
+      expect(camera.targetZoom).toBe(1)
+    })
+
+    it('zoomBy respects clamp at MAX_ZOOM', () => {
+      camera.setTargetZoom(MAX_ZOOM)
+      camera.zoomBy(2)
+      expect(camera.targetZoom).toBe(MAX_ZOOM)
+    })
+
+    it('update lerps zoom toward targetZoom', () => {
+      camera.zoom = 1
+      camera.setTargetZoom(2)
+      for (let i = 0; i < 300; i++) camera.update(1 / 60)
+      expect(camera.zoom).toBeCloseTo(2, 1)
+    })
   })
 })
