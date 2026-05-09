@@ -158,7 +158,7 @@ async function main(): Promise<void> {
 
         if (ctx.ship) {
           ctx.ship.applyControls(ctx.input)
-          applyGravity(ctx.registry, 50000, 'star')
+          applyGravity(ctx.registry, 2_000_000, 'star')
           ctx.rapierWorld.step(ctx.eventQueue)
           drainCollisionEvents(
             ctx.rapierWorld, ctx.eventQueue, ctx.registry,
