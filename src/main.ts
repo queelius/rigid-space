@@ -158,7 +158,7 @@ async function main(): Promise<void> {
 
         if (ctx.ship) {
           ctx.ship.applyControls(ctx.input)
-          applyGravity(ctx.registry, 2_000_000, 'star')
+          applyGravity(ctx.registry, config.gameplay.physics.gravity_constant, 'star')
           ctx.rapierWorld.step(ctx.eventQueue)
           drainCollisionEvents(
             ctx.rapierWorld, ctx.eventQueue, ctx.registry,
@@ -175,7 +175,10 @@ async function main(): Promise<void> {
       ctx.camera.setTarget(target.x, target.y)
       ctx.camera.update(1 / 60)
       starField.render(starGfx, ctx.camera, app.screen.width, app.screen.height)
-      ctx.renderer.renderBodies(ctx.registry, ctx.camera, ctx.ship)
+      // Pass undefined when paused so the glow does not render with stale thrust state.
+      // (Ship._thrusting is updated only inside applyControls, which is gated on !paused.)
+      const renderShip = ctx.screenStack.paused ? undefined : ctx.ship
+      ctx.renderer.renderBodies(ctx.registry, ctx.camera, renderShip)
 
       const c2d = hudCanvas.getContext('2d')!
       const w = app.screen.width

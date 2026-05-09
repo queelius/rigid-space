@@ -43,7 +43,7 @@ describe('lifecycle', () => {
           linear_damping: 0, angular_damping: 5, reverse_thrust_factor: 0.5,
           cannon: { mass: 1, speed: 400 },
         },
-        physics: { substeps: 4, timestep: 0.016 },
+        physics: { substeps: 4, timestep: 0.016, gravity_constant: 2000000 },
         collision: { restitution: 0.5, heat_fraction: 0.1, break_threshold: 500, event_threshold: 100 },
       },
     } as unknown as GameConfig

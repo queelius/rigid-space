@@ -12,6 +12,7 @@ ship:
 physics:
   substeps: 4
   timestep: 0.016
+  gravity_constant: 2000000     # G in F = G/r^2 for tagged gravity around the star
 
 solar_flares:
   probability: 0.02
@@ -31,7 +32,7 @@ thermal:
 
 collision:
   restitution: 0.5
-  heat_fraction: 0.1       # lowered from 0.3 — less heat per collision
+  heat_fraction: 0.1       # lowered from 0.3 (less heat per collision)
   break_threshold: 500
   event_threshold: 100
 

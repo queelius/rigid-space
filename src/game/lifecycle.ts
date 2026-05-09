@@ -58,7 +58,10 @@ export function spawnInitialWorld(ctx: GameContext): void {
     const r = 150 + Math.random() * 400
     const x = Math.cos(angle) * r
     const y = Math.sin(angle) * r
-    const v = 20 + Math.random() * 15
+    // Tangential orbital velocity: v = sqrt(G/r) for a circular orbit, with a
+    // 0.85 to 1.15 factor for slightly eccentric orbits (visual variety).
+    const vOrbit = Math.sqrt(config.gameplay.physics.gravity_constant / r)
+    const v = vOrbit * (0.85 + Math.random() * 0.3)
     const vx = -Math.sin(angle) * v
     const vy = Math.cos(angle) * v
     const size = 1 + Math.floor(Math.random() * 3)

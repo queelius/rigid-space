@@ -174,6 +174,7 @@ export interface GameplayShipConfig {
 export interface GameplayPhysicsConfig {
   substeps: number
   timestep: number
+  gravity_constant: number
 }
 
 export interface GameplaySolarFlaresConfig {
@@ -428,7 +429,7 @@ export async function loadConfig(): Promise<GameConfig> {
 }
 
 export function getConfig(): GameConfig {
-  if (!_config) throw new Error('Config not loaded — call loadConfig() first')
+  if (!_config) throw new Error('Config not loaded: call loadConfig() first')
   return _config
 }
 
