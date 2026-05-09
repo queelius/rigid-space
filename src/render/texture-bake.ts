@@ -47,6 +47,25 @@ function hexToCss(hex: number): string {
   return '#' + hex.toString(16).padStart(6, '0')
 }
 
+/** Mix a hex color toward white by amount (0..1). Returns a CSS rgb() string. */
+function lighten(hex: number, amount: number): string {
+  const r = (hex >> 16) & 0xff
+  const g = (hex >> 8) & 0xff
+  const b = hex & 0xff
+  const lr = Math.round(r + (255 - r) * amount)
+  const lg = Math.round(g + (255 - g) * amount)
+  const lb = Math.round(b + (255 - b) * amount)
+  return `rgb(${lr}, ${lg}, ${lb})`
+}
+
+/** Mix a hex color toward black by amount (0..1). Returns a CSS rgb() string. */
+function darken(hex: number, amount: number): string {
+  const r = Math.round(((hex >> 16) & 0xff) * (1 - amount))
+  const g = Math.round(((hex >> 8) & 0xff) * (1 - amount))
+  const b = Math.round((hex & 0xff) * (1 - amount))
+  return `rgb(${r}, ${g}, ${b})`
+}
+
 /**
  * Compute canvas size and sprite anchor for a grid composite.
  *
@@ -86,10 +105,25 @@ export function renderGridToCanvas(
       const cell = grid.get(gx, gy)
       if (!cell) continue
       const color = grid.getCellColor(gx, gy) ?? TYPE_COLORS[cell.type] ?? 0xFFFFFF
-      ctx.fillStyle = hexToCss(color)
-      const x = gx * cellScale
-      const y = (grid.height - 1 - gy) * cellScale
-      ctx.fillRect(x, y, cellScale, cellScale)
+      const baseStyle = hexToCss(color)
+      const lightStyle = lighten(color, 0.3)
+      const darkStyle = darken(color, 0.3)
+      const px = gx * cellScale
+      const py = (grid.height - 1 - gy) * cellScale
+
+      // Base fill
+      ctx.fillStyle = baseStyle
+      ctx.fillRect(px, py, cellScale, cellScale)
+
+      // Top and left highlights (lighter)
+      ctx.fillStyle = lightStyle
+      ctx.fillRect(px, py, cellScale, 1)
+      ctx.fillRect(px, py + 1, 1, cellScale - 1)
+
+      // Bottom and right shadows (darker)
+      ctx.fillStyle = darkStyle
+      ctx.fillRect(px, py + cellScale - 1, cellScale, 1)
+      ctx.fillRect(px + cellScale - 1, py + 1, 1, cellScale - 2)
     }
   }
 }

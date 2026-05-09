@@ -87,9 +87,9 @@ describe('texture-bake', () => {
   })
 
   describe('renderGridToCanvas', () => {
-    it('writes correct number of fillRect calls', () => {
+    it('renderGridToCanvas writes 5 fillRects per filled cell (base + 4 bevel edges)', () => {
       const grid = new GridComposite(3, 3)
-      // Five cells filled
+      // Five cells filled, each cell drawn as 1 base + 4 bevel rects
       grid.set(0, 0, Type.ROCK)
       grid.set(1, 0, Type.ROCK)
       grid.set(2, 1, Type.IRON)
@@ -98,7 +98,7 @@ describe('texture-bake', () => {
       const { ctx, calls } = makeMockCtx()
       renderGridToCanvas(ctx, grid, 10)
       const fillRects = calls.filter(c => c.method === 'fillRect')
-      expect(fillRects).toHaveLength(5)
+      expect(fillRects).toHaveLength(25)
     })
 
     it('cell at gy=0 lands at canvas bottom', () => {
@@ -107,8 +107,9 @@ describe('texture-bake', () => {
       const { ctx, calls } = makeMockCtx()
       renderGridToCanvas(ctx, grid, 10)
       const fillRects = calls.filter(c => c.method === 'fillRect')
-      expect(fillRects).toHaveLength(1)
-      // canvasHeight = 30, gy=0 lands at y = (3-1-0)*10 = 20
+      // 5 rects per cell: base + 4 bevel edges
+      expect(fillRects).toHaveLength(5)
+      // canvasHeight = 30, gy=0 lands at y = (3-1-0)*10 = 20; first rect is the base fill
       expect(fillRects[0].args).toEqual([0, 20, 10, 10])
     })
 
@@ -118,8 +119,9 @@ describe('texture-bake', () => {
       const { ctx, calls } = makeMockCtx()
       renderGridToCanvas(ctx, grid, 10)
       const fillRects = calls.filter(c => c.method === 'fillRect')
-      expect(fillRects).toHaveLength(1)
-      // gy=2 -> y = (3-1-2)*10 = 0
+      // 5 rects per cell: base + 4 bevel edges
+      expect(fillRects).toHaveLength(5)
+      // gy=2 -> y = (3-1-2)*10 = 0; first rect is the base fill
       expect(fillRects[0].args).toEqual([0, 0, 10, 10])
     })
 
