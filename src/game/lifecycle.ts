@@ -28,7 +28,8 @@ export function spawnInitialWorld(ctx: GameContext): void {
   )
   starSpawned.colliderMap.delete('0,0')
   starSpawned.colliderMap.set('ball', ballCollider)
-  registry.add('star', starSpawned, { proximityKey: 'star', radius: 50 })
+  const starId = registry.add('star', starSpawned, { proximityKey: 'star', radius: 50 })
+  ctx.renderer.onBodyAdded(registry.get(starId)!)
 
   // Ship: 3x5 grid at (500, 0) at rest with SC2 damping
   const shipGrid = new GridComposite(3, 5)
@@ -44,6 +45,7 @@ export function spawnInitialWorld(ctx: GameContext): void {
     enableCollisionEvents: true,
   })
   const shipId = registry.add('ship', shipSpawned)
+  ctx.renderer.onBodyAdded(registry.get(shipId)!)
   ctx.ship = new Ship(shipId, shipSpawned, config.gameplay.ship)
 
   // Asteroids: 20 randomized 1x1 to 3x3 ROCK/IRON grids in rough orbits.
@@ -77,7 +79,8 @@ export function spawnInitialWorld(ctx: GameContext): void {
     const spawned = spawnComposite(rapierWorld, grid, x, y, vx, vy, 8, {
       enableCollisionEvents: true,
     })
-    registry.add('asteroid', spawned)
+    const asteroidId = registry.add('asteroid', spawned)
+    ctx.renderer.onBodyAdded(registry.get(asteroidId)!)
   }
 }
 
@@ -89,6 +92,7 @@ export function despawnAll(ctx: GameContext): void {
   ctx.soundEngine?.setContinuous('thrust', false)
   const ids = ctx.registry.all().map(e => e.id)
   for (const id of ids) {
+    ctx.renderer.onBodyRemoved(id)
     ctx.registry.remove(ctx.rapierWorld, id)
   }
   // Drain any pending collision events so they don't leak into the next session.

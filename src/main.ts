@@ -8,7 +8,7 @@ import { applyGravity } from './engine/gravity'
 import { InputManager } from './game/input'
 import { ScreenStack } from './game/screen-stack'
 import { EventBus } from './engine/events'
-import { GraphicsBodyRenderer } from './render/body-renderer'
+import { SpriteBodyRenderer } from './render/sprite-body-renderer'
 import { createGameLoop } from './game/game-loop'
 import { Camera } from './game/camera'
 import { SoundEngine } from './game/sound'
@@ -54,7 +54,7 @@ async function main(): Promise<void> {
     screenStack: new ScreenStack(),
     events: new EventBus(),
     config,
-    renderer: new GraphicsBodyRenderer(app),
+    renderer: new SpriteBodyRenderer(app),
     camera: new Camera(),
     soundEngine: new SoundEngine(),  // not init'd yet; init runs on user gesture
   }

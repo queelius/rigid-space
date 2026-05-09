@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, beforeEach } from 'vitest'
+import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest'
 import RAPIER from '@dimforge/rapier2d-compat'
 import { spawnInitialWorld, despawnAll, updateAudio } from './lifecycle'
 import { BodyRegistry } from '../engine/body-registry'
@@ -6,6 +6,20 @@ import { Camera } from './camera'
 import { EventBus } from '../engine/events'
 import type { GameContext } from './game-context'
 import type { GameConfig } from '../config/loader'
+import type { RegistryEntry } from '../engine/body-registry'
+
+function makeMockRenderer(): GameContext['renderer'] & {
+  onBodyAdded: ReturnType<typeof vi.fn<(entry: RegistryEntry) => void>>
+  onBodyRemoved: ReturnType<typeof vi.fn<(id: number) => void>>
+} {
+  const mock = {
+    onBodyAdded: vi.fn<(entry: RegistryEntry) => void>(),
+    onBodyRemoved: vi.fn<(id: number) => void>(),
+    renderBodies: vi.fn(),
+    resize: vi.fn(),
+  }
+  return mock as unknown as GameContext['renderer'] & typeof mock
+}
 
 describe('lifecycle', () => {
   let world: RAPIER.World
@@ -39,7 +53,7 @@ describe('lifecycle', () => {
       registry, ship: undefined,
       input: null as never, screenStack: null as never,
       events: new EventBus(),
-      config, renderer: null as never, camera,
+      config, renderer: makeMockRenderer(), camera,
       soundEngine: null as never,
     }
   })
@@ -126,5 +140,24 @@ describe('lifecycle', () => {
     // ship stays undefined
     updateAudio(ctx)
     expect(setContinuousCalls).toEqual([])
+  })
+
+  it('spawnInitialWorld calls onBodyAdded for each spawned body', () => {
+    spawnInitialWorld(ctx)
+    const onBodyAdded = (ctx.renderer.onBodyAdded as unknown) as ReturnType<typeof vi.fn>
+    // 1 star + 1 ship + 20 asteroids = 22
+    expect(onBodyAdded).toHaveBeenCalledTimes(22)
+    // First entry should be the star
+    const firstCall = onBodyAdded.mock.calls[0]
+    expect((firstCall[0] as RegistryEntry).tag).toBe('star')
+  })
+
+  it('despawnAll calls onBodyRemoved for each body', () => {
+    spawnInitialWorld(ctx)
+    const onBodyRemoved = (ctx.renderer.onBodyRemoved as unknown) as ReturnType<typeof vi.fn>
+    // Sanity: nothing removed yet
+    expect(onBodyRemoved).toHaveBeenCalledTimes(0)
+    despawnAll(ctx)
+    expect(onBodyRemoved).toHaveBeenCalledTimes(22)
   })
 })
