@@ -8,7 +8,6 @@ import type { BodyRenderer } from './body-renderer'
 import type { BodyRegistry, RegistryEntry } from '../engine/body-registry'
 import type { Camera } from '../game/camera'
 import type { Ship } from '../game/ship'
-import { typeProps } from '../engine/types'
 import {
   computeGridBakeDimensions,
   renderGridToCanvas,
@@ -20,8 +19,8 @@ export class SpriteBodyRenderer implements BodyRenderer {
   private worldContainer: Container
   private glowGfx: Graphics
   private sprites = new Map<number, Sprite>()
-  private starTexture: Texture | null = null
-  private starTextureRadius = -1
+  // Star textures keyed by radius so each unique radius gets its own bake.
+  private starTextures = new Map<number, Texture>()
 
   constructor(app: Application) {
     this.app = app
@@ -32,6 +31,7 @@ export class SpriteBodyRenderer implements BodyRenderer {
   }
 
   onBodyAdded(entry: RegistryEntry): void {
+    if (this.sprites.has(entry.id)) return  // guard against double-add
     const sprite = this.bakeSprite(entry)
     this.sprites.set(entry.id, sprite)
     this.worldContainer.addChild(sprite)
@@ -41,8 +41,10 @@ export class SpriteBodyRenderer implements BodyRenderer {
     const sprite = this.sprites.get(id)
     if (!sprite) return
     this.worldContainer.removeChild(sprite)
-    // Star textures are shared across stars; never destroy via the sprite.
-    sprite.destroy({ texture: false })
+    // Grid textures (asteroids, ship) are unique per body and must be freed.
+    // Star textures are shared across all stars and stay alive in starTextures.
+    const ownsTexture = !this.isStarTexture(sprite.texture)
+    sprite.destroy({ texture: ownsTexture })
     this.sprites.delete(id)
   }
 
@@ -62,6 +64,8 @@ export class SpriteBodyRenderer implements BodyRenderer {
     }
 
     // Thruster glow: drawn each frame in world container so it scales with zoom.
+    // Glow drawn behind ship (forward direction is (sin(angle), cos(angle))).
+    // Pre-Phase-3 GraphicsBodyRenderer drew it in front; that was a pre-existing bug.
     // Axis-aligned ellipse at fixed offset behind the ship; rotation polish deferred.
     this.glowGfx.clear()
     if (ship?.isThrusting()) {
@@ -85,17 +89,25 @@ export class SpriteBodyRenderer implements BodyRenderer {
     return this.bakeGridSprite(entry)
   }
 
+  private isStarTexture(t: Texture): boolean {
+    for (const cached of this.starTextures.values()) {
+      if (cached === t) return true
+    }
+    return false
+  }
+
   private bakeStarSprite(entry: RegistryEntry): Sprite {
     const radius = entry.metadata?.radius ?? 50
-    if (!this.starTexture || this.starTextureRadius !== radius) {
+    let texture = this.starTextures.get(radius)
+    if (!texture) {
       const canvas = new OffscreenCanvas(2 * radius, 2 * radius)
       const ctx = canvas.getContext('2d')
       if (!ctx) throw new Error('SpriteBodyRenderer: 2d context unavailable')
       renderStarToCanvas(ctx, radius)
-      this.starTexture = Texture.from(canvas)
-      this.starTextureRadius = radius
+      texture = Texture.from(canvas)
+      this.starTextures.set(radius, texture)
     }
-    const sprite = new Sprite(this.starTexture)
+    const sprite = new Sprite(texture)
     sprite.anchor.set(0.5, 0.5)
     return sprite
   }
@@ -103,28 +115,10 @@ export class SpriteBodyRenderer implements BodyRenderer {
   private bakeGridSprite(entry: RegistryEntry): Sprite {
     const grid = entry.spawned.grid
     const cellScale = entry.spawned.cellScale
+    // Use COM from SpawnedBody; spawnComposite already computed it.
+    const com = entry.spawned.com
 
-    // Recompute COM the same way rigid-spawn.ts does so the sprite anchor lines
-    // up with the body's translation reported by Rapier.
-    let totalMass = 0
-    let comX = 0
-    let comY = 0
-    for (let gy = 0; gy < grid.height; gy++) {
-      for (let gx = 0; gx < grid.width; gx++) {
-        const cell = grid.get(gx, gy)
-        if (!cell) continue
-        const mass = typeProps(cell.type).defaultMass
-        comX += (gx - grid.width / 2 + 0.5) * cellScale * mass
-        comY += (gy - grid.height / 2 + 0.5) * cellScale * mass
-        totalMass += mass
-      }
-    }
-    if (totalMass > 0) {
-      comX /= totalMass
-      comY /= totalMass
-    }
-
-    const dims = computeGridBakeDimensions(grid, cellScale, { x: comX, y: comY })
+    const dims = computeGridBakeDimensions(grid, cellScale, com)
     const canvas = new OffscreenCanvas(dims.canvasWidth, dims.canvasHeight)
     const ctx = canvas.getContext('2d')
     if (!ctx) throw new Error('SpriteBodyRenderer: 2d context unavailable')

@@ -15,8 +15,10 @@ export interface BakeDimensions {
   anchorY: number
 }
 
-// Hardcoded type colors mirroring the legacy GraphicsBodyRenderer palette.
-// These match the YAML config defaults; config-driven colors come later.
+// FIXME: TYPE_COLORS duplicates the type-to-color mapping that should live
+// alongside defaultMass/bondStrength in TypeProps. Once Type config gains a
+// 'color' field loaded from types.yaml via applyTypeConfig, replace this
+// array with typeProps(cell.type).defaultColor.
 const TYPE_COLORS: number[] = [
   0x888888, // ROCK
   0xAAAAAA, // IRON

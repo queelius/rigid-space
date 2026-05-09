@@ -57,6 +57,31 @@ describe('spawnComposite', () => {
     expect(spawned.cellScale).toBe(15)
   })
 
+  it('exposes com matching the computed center of mass', () => {
+    // Symmetric 2x2 all-ROCK grid: COM must be at origin (0, 0).
+    const grid = new GridComposite(2, 2)
+    grid.set(0, 0, Type.ROCK)
+    grid.set(1, 0, Type.ROCK)
+    grid.set(0, 1, Type.ROCK)
+    grid.set(1, 1, Type.ROCK)
+    const spawned = spawnComposite(world, grid, 0, 0, 0, 0, 10)
+    expect(spawned.com.x).toBeCloseTo(0, 5)
+    expect(spawned.com.y).toBeCloseTo(0, 5)
+  })
+
+  it('com is offset when mass is asymmetric', () => {
+    // Single cell at (1, 0) in a 2x1 grid with cellScale 10:
+    // Only (1,0) is filled. Cell center in body-local coords:
+    // gx=1, width=2: (1 - 2/2 + 0.5) * 10 = (0.5) * 10 = 5
+    // gy=0, height=1: (0 - 1/2 + 0.5) * 10 = 0
+    // With a single cell, COM == that cell's center.
+    const grid = new GridComposite(2, 1)
+    grid.set(1, 0, Type.ROCK)
+    const spawned = spawnComposite(world, grid, 0, 0, 0, 0, 10)
+    expect(spawned.com.x).toBeCloseTo(5, 5)
+    expect(spawned.com.y).toBeCloseTo(0, 5)
+  })
+
   it('computes totalMass from cell types', () => {
     const grid = new GridComposite(1, 1)
     grid.set(0, 0, Type.ROCK) // defaultMass = 6.0

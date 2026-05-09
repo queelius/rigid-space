@@ -20,6 +20,9 @@ export function spawnInitialWorld(ctx: GameContext): void {
   const starSpawned = spawnComposite(rapierWorld, starGrid, 0, 0, 0, 0, 50, { kinematic: true })
   const starCuboid = starSpawned.colliderMap.get('0,0')!
   rapierWorld.removeCollider(starCuboid, false)
+  // metadata.radius MUST match the ball collider radius. SpriteBodyRenderer
+  // reads metadata.radius for the texture bake; if the values diverge, the
+  // visual sphere will not match the physics sphere.
   const ballCollider = rapierWorld.createCollider(
     RAPIER.ColliderDesc.ball(50)
       .setDensity(100)

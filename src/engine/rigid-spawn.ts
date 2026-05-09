@@ -20,6 +20,8 @@ export interface SpawnedBody {
   grid: GridComposite
   /** Cell scale used at spawn */
   cellScale: number
+  /** Center of mass in body-local coordinates (body-local Y points up) */
+  com: { x: number; y: number }
 }
 
 export interface SpawnOptions {
@@ -98,7 +100,7 @@ export function spawnComposite(
     }
   }
 
-  return { body, colliderMap, totalMass, grid, cellScale }
+  return { body, colliderMap, totalMass, grid, cellScale, com: { x: comX, y: comY } }
 }
 
 /** Remove a cell's collider from a spawned body (damage/mining). */
