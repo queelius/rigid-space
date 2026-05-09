@@ -1,10 +1,10 @@
 ship:
-  thrust_strength: 2000        # raised from 500; tune empirically in Task 15
-  rotation_rate: 3             # rad/s; was torque, now instant angular velocity
-  max_speed: 250               # NEW: hard cap on linear velocity magnitude
-  linear_damping: 0            # NEW: 0 = Newtonian drift
-  angular_damping: 5           # NEW: high so rotation snaps to halt on key release
-  reverse_thrust_factor: 0.5   # NEW: was hardcoded; expose for tuning
+  thrust_strength: 1500        # ship mass ~25; accel 60 u/s^2; ~4.2s to max_speed
+  rotation_rate: 3             # rad/s; instant angular velocity
+  max_speed: 250               # hard cap on linear velocity magnitude
+  linear_damping: 0            # 0 = Newtonian drift (no friction)
+  angular_damping: 5           # cosmetic now that rotation uses setAngvel directly
+  reverse_thrust_factor: 0.75  # less weak than 0.5; useful for course correction
   cannon:
     mass: 1.0
     speed: 400
@@ -12,7 +12,7 @@ ship:
 physics:
   substeps: 4
   timestep: 0.016
-  gravity_constant: 2000000     # G in F = G/r^2 for tagged gravity around the star
+  gravity_constant: 1000000     # G in F = G/r^2; ship escapes thrust > grav at r >= ~129
 
 solar_flares:
   probability: 0.02
