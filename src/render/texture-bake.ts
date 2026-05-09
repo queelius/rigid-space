@@ -3,6 +3,7 @@
 // OffscreenCanvasRenderingContext2D (in the real renderer).
 
 import type { GridComposite } from '../engine/grid-composite'
+import { CELL_PATTERNS, makeCellRng, cellSeed } from './cell-patterns'
 
 export interface BakeDimensions {
   /** Canvas width in pixels. */
@@ -124,6 +125,13 @@ export function renderGridToCanvas(
       ctx.fillStyle = darkStyle
       ctx.fillRect(px, py + cellScale - 1, cellScale, 1)
       ctx.fillRect(px + cellScale - 1, py + 1, 1, cellScale - 2)
+
+      // Per-type pattern overlay (e.g. brushed metal for IRON, exhaust slot for THRUSTER).
+      const pattern = CELL_PATTERNS[cell.type]
+      if (pattern) {
+        const rng = makeCellRng(cellSeed(gx, gy, cell.type))
+        pattern(ctx, px, py, cellScale, rng)
+      }
     }
   }
 }
