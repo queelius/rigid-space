@@ -153,3 +153,20 @@ export function renderStarToCanvas(
   ctx.fillStyle = grad
   ctx.fillRect(0, 0, 2 * radius, 2 * radius)
 }
+
+/**
+ * Render a procedural cannon projectile (cyan-white radial gradient bolt) to a
+ * 2D canvas context. Canvas should be 2*radius square. Center is at
+ * (radius, radius); white core fades through pale blue to transparent edge.
+ */
+export function renderProjectileToCanvas(
+  ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
+  radius: number,
+): void {
+  const grad = ctx.createRadialGradient(radius, radius, 0, radius, radius, radius)
+  grad.addColorStop(0.0, 'rgba(255, 255, 255, 1.0)')   // white core
+  grad.addColorStop(0.4, 'rgba(180, 230, 255, 0.9)')   // pale blue mid
+  grad.addColorStop(1.0, 'rgba(80, 160, 255, 0.0)')    // transparent edge
+  ctx.fillStyle = grad
+  ctx.fillRect(0, 0, 2 * radius, 2 * radius)
+}

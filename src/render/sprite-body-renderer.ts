@@ -11,8 +11,11 @@ import type { Ship } from '../game/ship'
 import {
   computeGridBakeDimensions,
   renderGridToCanvas,
+  renderProjectileToCanvas,
   renderStarToCanvas,
 } from './texture-bake'
+
+const PROJECTILE_RADIUS = 8
 
 export class SpriteBodyRenderer implements BodyRenderer {
   private app: Application
@@ -21,6 +24,8 @@ export class SpriteBodyRenderer implements BodyRenderer {
   private sprites = new Map<number, Sprite>()
   // Star textures keyed by radius so each unique radius gets its own bake.
   private starTextures = new Map<number, Texture>()
+  // Single shared projectile texture, lazily baked on first use.
+  private projectileTexture: Texture | null = null
 
   constructor(app: Application) {
     this.app = app
@@ -28,6 +33,11 @@ export class SpriteBodyRenderer implements BodyRenderer {
     app.stage.addChild(this.worldContainer)
     this.glowGfx = new Graphics()
     this.worldContainer.addChild(this.glowGfx)
+  }
+
+  /** Expose the world container so combat/effects layers can render in scene space. */
+  getWorldContainer(): Container {
+    return this.worldContainer
   }
 
   onBodyAdded(entry: RegistryEntry): void {
@@ -42,8 +52,8 @@ export class SpriteBodyRenderer implements BodyRenderer {
     if (!sprite) return
     this.worldContainer.removeChild(sprite)
     // Grid textures (asteroids, ship) are unique per body and must be freed.
-    // Star textures are shared across all stars and stay alive in starTextures.
-    const ownsTexture = !this.isStarTexture(sprite.texture)
+    // Star and projectile textures are shared/cached and stay alive.
+    const ownsTexture = !this.isCachedTexture(sprite.texture)
     sprite.destroy({ texture: ownsTexture })
     this.sprites.delete(id)
   }
@@ -86,13 +96,18 @@ export class SpriteBodyRenderer implements BodyRenderer {
 
   private bakeSprite(entry: RegistryEntry): Sprite {
     if (entry.tag === 'star') return this.bakeStarSprite(entry)
+    if (entry.tag === 'projectile') return this.bakeProjectileSprite()
     return this.bakeGridSprite(entry)
   }
 
-  private isStarTexture(t: Texture): boolean {
+  /** Returns true when the texture is shared/cached and must NOT be destroyed
+   *  with its sprite. Currently covers the star (per-radius) and projectile
+   *  (single shared) caches. */
+  private isCachedTexture(t: Texture): boolean {
     for (const cached of this.starTextures.values()) {
       if (cached === t) return true
     }
+    if (this.projectileTexture && this.projectileTexture === t) return true
     return false
   }
 
@@ -108,6 +123,19 @@ export class SpriteBodyRenderer implements BodyRenderer {
       this.starTextures.set(radius, texture)
     }
     const sprite = new Sprite(texture)
+    sprite.anchor.set(0.5, 0.5)
+    return sprite
+  }
+
+  private bakeProjectileSprite(): Sprite {
+    if (!this.projectileTexture) {
+      const canvas = new OffscreenCanvas(2 * PROJECTILE_RADIUS, 2 * PROJECTILE_RADIUS)
+      const ctx = canvas.getContext('2d')
+      if (!ctx) throw new Error('SpriteBodyRenderer: 2d context unavailable')
+      renderProjectileToCanvas(ctx, PROJECTILE_RADIUS)
+      this.projectileTexture = Texture.from(canvas)
+    }
+    const sprite = new Sprite(this.projectileTexture)
     sprite.anchor.set(0.5, 0.5)
     return sprite
   }

@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   computeGridBakeDimensions,
   renderGridToCanvas,
+  renderProjectileToCanvas,
   renderStarToCanvas,
 } from './texture-bake'
 import { GridComposite } from '../engine/grid-composite'
@@ -167,6 +168,32 @@ describe('texture-bake', () => {
       const fillRect = calls.find(c => c.method === 'fillRect')
       expect(fillRect).toBeDefined()
       expect(fillRect!.args).toEqual([0, 0, 100, 100])
+    })
+  })
+
+  describe('renderProjectileToCanvas', () => {
+    it('uses radial gradient and fills the canvas', () => {
+      const { ctx, calls } = makeMockCtx()
+      renderProjectileToCanvas(ctx, 8)
+      const gradCall = calls.find(c => c.method === 'createRadialGradient')
+      expect(gradCall).toBeDefined()
+      // Inner radius 0, outer radius = radius; centered at (radius, radius).
+      expect(gradCall!.args).toEqual([8, 8, 0, 8, 8, 8])
+      const fillRect = calls.find(c => c.method === 'fillRect')
+      expect(fillRect).toBeDefined()
+      expect(fillRect!.args).toEqual([0, 0, 16, 16])
+    })
+
+    it('uses three color stops (white core, pale blue mid, transparent edge)', () => {
+      const { ctx, gradStops } = makeMockCtx()
+      renderProjectileToCanvas(ctx, 8)
+      expect(gradStops).toHaveLength(3)
+      expect(gradStops[0].offset).toBe(0.0)
+      expect(gradStops[0].color).toBe('rgba(255, 255, 255, 1.0)')
+      expect(gradStops[1].offset).toBe(0.4)
+      expect(gradStops[1].color).toBe('rgba(180, 230, 255, 0.9)')
+      expect(gradStops[2].offset).toBe(1.0)
+      expect(gradStops[2].color).toBe('rgba(80, 160, 255, 0.0)')
     })
   })
 })
