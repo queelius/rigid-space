@@ -13,10 +13,12 @@ import { createGameLoop } from './game/game-loop'
 import { Camera } from './game/camera'
 import { SoundEngine } from './game/sound'
 import { drainCollisionEvents } from './game/collision-events'
-import { spawnInitialWorld, despawnAll, updateAudio } from './game/lifecycle'
+import { spawnInitialWorld, despawnAll, updateAudio, respawnShip } from './game/lifecycle'
 import { MainMenu } from './game/states/main-menu'
 import { GameHUD } from './game/states/game-hud'
 import { PauseMenu } from './game/states/pause-menu'
+import { BuilderState } from './game/states/builder'
+import { Builder } from './game/builder'
 import { Minimap } from './render/minimap'
 import type { GameContext } from './game/game-context'
 
@@ -59,6 +61,11 @@ async function main(): Promise<void> {
     soundEngine: new SoundEngine(),  // not init'd yet; init runs on user gesture
   }
 
+  // Shared Builder instance: paletteIndex and selectedType persist across
+  // builder sessions for nicer UX (no need to reselect favorite type each time).
+  // The grid reference is replaced on every entry via builder.startShipEdit(clone).
+  const builder = new Builder()
+
   // Lifecycle helpers wired with state-pushing callbacks (avoids circular imports
   // between lifecycle.ts and the state classes).
   function enterPlaying(): void {
@@ -84,6 +91,25 @@ async function main(): Promise<void> {
     }))
   }
 
+  function onBuild(): void {
+    if (!ctx.ship) return
+    // Silence thrust loop immediately; physics is paused while builder is on top.
+    ctx.soundEngine.setContinuous('thrust', false)
+    const originalPosition = ctx.ship.position()
+    const originalRotation = ctx.ship.rotation()
+    const editableGrid = ctx.ship.spawned.grid.clone()
+    builder.startShipEdit(editableGrid)
+    ctx.screenStack.push(new BuilderState(builder, {
+      onSave: (newGrid) => {
+        respawnShip(ctx, newGrid, originalPosition, originalRotation)
+        ctx.screenStack.pop()
+      },
+      onCancel: () => {
+        ctx.screenStack.pop()
+      },
+    }))
+  }
+
   function makeGameHUD(): GameHUD {
     const minimap = new Minimap()
     return new GameHUD(
@@ -98,7 +124,7 @@ async function main(): Promise<void> {
           return { x: t.x, y: t.y, tag: e.tag }
         }),
       },
-      { onPause: pushPauseMenu },
+      { onPause: pushPauseMenu, onBuild },
       minimap,
     )
   }
