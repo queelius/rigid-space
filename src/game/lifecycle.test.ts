@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest'
 import RAPIER from '@dimforge/rapier2d-compat'
-import { spawnInitialWorld, despawnAll, updateAudio, respawnShip } from './lifecycle'
+import { spawnInitialWorld, despawnAll, updateAudio, respawnShip, despawnBody } from './lifecycle'
 import { BodyRegistry } from '../engine/body-registry'
 import { Camera } from './camera'
 import { EventBus } from '../engine/events'
@@ -228,5 +228,20 @@ describe('lifecycle', () => {
     expect(onBodyAdded).toHaveBeenCalledTimes(23)
     const lastAdd = onBodyAdded.mock.calls[onBodyAdded.mock.calls.length - 1]
     expect((lastAdd[0] as RegistryEntry).tag).toBe('ship')
+  })
+
+  it('despawnBody removes from registry and notifies renderer', () => {
+    spawnInitialWorld(ctx)
+    const onBodyRemoved = (ctx.renderer.onBodyRemoved as unknown) as ReturnType<typeof vi.fn>
+    const asteroidId = ctx.registry.firstByTag('asteroid')!.id
+    const beforeCount = ctx.registry.all().length
+    expect(onBodyRemoved).toHaveBeenCalledTimes(0)
+
+    despawnBody(ctx, asteroidId)
+
+    expect(onBodyRemoved).toHaveBeenCalledTimes(1)
+    expect(onBodyRemoved).toHaveBeenCalledWith(asteroidId)
+    expect(ctx.registry.get(asteroidId)).toBeUndefined()
+    expect(ctx.registry.all().length).toBe(beforeCount - 1)
   })
 })

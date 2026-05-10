@@ -91,6 +91,18 @@ export function spawnInitialWorld(ctx: GameContext): void {
 }
 
 /**
+ * Despawn a single body by id: notify the renderer first (so its sprite is
+ * destroyed before the registry entry vanishes), then remove from the registry
+ * (which removes the rigid body and its colliders from the Rapier world).
+ *
+ * No-op when id is not in the registry.
+ */
+export function despawnBody(ctx: GameContext, id: number): void {
+  ctx.renderer.onBodyRemoved(id)
+  ctx.registry.remove(ctx.rapierWorld, id)
+}
+
+/**
  * Replace ctx.ship in place: despawn current ship, then spawn a new one with
  * the given grid at (position.x, position.y) with the given rotation and zero
  * velocity. The renderer is notified via onBodyRemoved (old ship) followed by
@@ -107,9 +119,7 @@ export function respawnShip(
 ): void {
   // Despawn current ship (if any).
   if (ctx.ship) {
-    const id = ctx.ship.registryId
-    ctx.renderer.onBodyRemoved(id)
-    ctx.registry.remove(ctx.rapierWorld, id)
+    despawnBody(ctx, ctx.ship.registryId)
     ctx.ship = undefined
   }
 
