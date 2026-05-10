@@ -38,7 +38,7 @@ describe('Ship', () => {
       linear_damping: 0,
       angular_damping: 5,
       reverse_thrust_factor: 0.5,
-      cannon: { mass: 1, speed: 400 },
+      cannon: { mass: 1, speed: 400, cooldown: 0.3, lifetime: 3.0, energy: 1.0 },
     })
   }
 
@@ -190,5 +190,42 @@ describe('Ship', () => {
     // No rotate_left or rotate_right is held
     ship.applyControls(input)
     expect(ship.spawned.body.angvel()).toBeCloseTo(0, 5)
+  })
+
+  it('cannonCooldown starts at 0 (ready to fire)', () => {
+    const ship = makeShip()
+    expect(ship.cannonCooldown).toBe(0)
+    expect(ship.canFire()).toBe(true)
+  })
+
+  it('tickCooldown decrements cooldown by dt', () => {
+    const ship = makeShip()
+    ship.cannonCooldown = 0.5
+    ship.tickCooldown(0.1)
+    expect(ship.cannonCooldown).toBeCloseTo(0.4, 6)
+    // Clamp at 0; further ticks past zero stay at 0.
+    ship.tickCooldown(1.0)
+    expect(ship.cannonCooldown).toBe(0)
+  })
+
+  it('markFired sets cooldown to cooldownDuration', () => {
+    const ship = makeShip()
+    expect(ship.cannonCooldown).toBe(0)
+    ship.markFired()
+    // makeShip uses cooldown: 0.3
+    expect(ship.cannonCooldown).toBeCloseTo(0.3, 6)
+    expect(ship.cannonCooldownDuration).toBeCloseTo(0.3, 6)
+  })
+
+  it('canFire returns false during cooldown, true after', () => {
+    const ship = makeShip()
+    ship.markFired()
+    expect(ship.canFire()).toBe(false)
+    // Tick most of the cooldown away.
+    ship.tickCooldown(0.2)
+    expect(ship.canFire()).toBe(false)
+    // Tick past zero.
+    ship.tickCooldown(0.2)
+    expect(ship.canFire()).toBe(true)
   })
 })

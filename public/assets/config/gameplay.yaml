@@ -8,6 +8,9 @@ ship:
   cannon:
     mass: 1.0
     speed: 400
+    cooldown: 0.3                # seconds between shots
+    lifetime: 3.0                # seconds before projectile auto-despawns
+    energy: 1.0                  # used for CANNON_FIRE event volume scaling
 
 physics:
   substeps: 4

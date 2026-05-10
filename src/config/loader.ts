@@ -159,6 +159,9 @@ export interface NpcsConfig {
 export interface GameplayShipCannonConfig {
   mass: number
   speed: number
+  cooldown: number   // seconds between shots
+  lifetime: number   // seconds before projectile auto-despawns
+  energy: number     // event payload field for CANNON_FIRE volume scaling
 }
 
 export interface GameplayShipConfig {

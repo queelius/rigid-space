@@ -11,6 +11,11 @@ export class Ship {
   maxSpeed: number
   reverseThrustFactor: number
 
+  /** Seconds remaining until the cannon can fire again. 0 = ready. */
+  cannonCooldown = 0
+  /** Cooldown duration set by markFired(); read from config.cannon.cooldown. */
+  cannonCooldownDuration: number
+
   private _thrusting = false
 
   constructor(registryId: number, spawned: SpawnedBody, config: GameplayShipConfig) {
@@ -20,6 +25,24 @@ export class Ship {
     this.rotationRate = config.rotation_rate
     this.maxSpeed = config.max_speed
     this.reverseThrustFactor = config.reverse_thrust_factor
+    this.cannonCooldownDuration = config.cannon.cooldown
+  }
+
+  /** Decrement cooldown by dt (clamped at 0). Call once per fixedUpdate. */
+  tickCooldown(dt: number): void {
+    if (this.cannonCooldown > 0) {
+      this.cannonCooldown = Math.max(0, this.cannonCooldown - dt)
+    }
+  }
+
+  /** True when the cannon is ready to fire. */
+  canFire(): boolean {
+    return this.cannonCooldown <= 0
+  }
+
+  /** Reset cooldown to its full duration (called immediately after firing). */
+  markFired(): void {
+    this.cannonCooldown = this.cannonCooldownDuration
   }
 
   applyControls(input: InputManager): void {
