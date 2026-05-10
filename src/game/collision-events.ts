@@ -53,15 +53,16 @@ export function drainCollisionEvents(
 
     const t1 = b1.translation()
     const t2 = b2.translation()
-    const tag1 = registry.findByBody(b1)?.tag
-    const tag2 = registry.findByBody(b2)?.tag
+    const entry1 = registry.findByBody(b1)
+    const entry2 = registry.findByBody(b2)
 
     events.emit({
       type: 'COLLISION',
       x: (t1.x + t2.x) * 0.5,
       y: (t1.y + t2.y) * 0.5,
       energy,
-      tags: [tag1, tag2],
+      tags: [entry1?.tag, entry2?.tag],
+      ids: [entry1?.id, entry2?.id],
     })
   })
 }

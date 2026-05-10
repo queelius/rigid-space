@@ -79,4 +79,30 @@ describe('drainCollisionEvents', () => {
     expect(Math.abs(event.x)).toBeLessThan(5)
     expect(Math.abs(event.y)).toBeLessThan(5)
   })
+
+  it('COLLISION event includes ids matching the colliding bodies', () => {
+    spawnAt('ship', -20, 100)
+    spawnAt('asteroid', 20, -100)
+    // Capture the body ids in registration order. spawnAt registers in order:
+    // first the ship (id 0), then the asteroid (id 1).
+    const shipEntry = registry.firstByTag('ship')!
+    const asteroidEntry = registry.firstByTag('asteroid')!
+    for (let i = 0; i < 100; i++) {
+      world.step(queue)
+      drainCollisionEvents(world, queue, registry, bus, 0)
+      if (received.length > 0) break
+    }
+    const event = received[0]
+    const tags = event.tags as Array<string | undefined>
+    const ids = event.ids as Array<number | undefined>
+    expect(Array.isArray(ids)).toBe(true)
+    expect(ids).toHaveLength(2)
+    // ids are in the same slot order as tags; verify each id matches the body
+    // bound to its slot's tag.
+    const tagToId = new Map<string, number>()
+    tagToId.set(tags[0]!, ids[0]!)
+    tagToId.set(tags[1]!, ids[1]!)
+    expect(tagToId.get('ship')).toBe(shipEntry.id)
+    expect(tagToId.get('asteroid')).toBe(asteroidEntry.id)
+  })
 })
