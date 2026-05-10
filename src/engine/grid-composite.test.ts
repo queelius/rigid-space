@@ -92,4 +92,45 @@ describe('GridComposite', () => {
     expect(grid.hasFuelNeighbor(1, 1)).toBe(true)
     expect(grid.hasFuelNeighbor(2, 2)).toBe(false)
   })
+
+  it('clone produces a structurally equal grid', () => {
+    const original = new GridComposite(4, 5)
+    original.set(0, 0, Type.COCKPIT, Direction.DOWN)
+    original.set(1, 2, Type.FUEL, Direction.UP)
+    original.set(3, 4, Type.THRUSTER, Direction.RIGHT)
+
+    const copy = original.clone()
+    expect(copy.width).toBe(original.width)
+    expect(copy.height).toBe(original.height)
+    for (let y = 0; y < original.height; y++) {
+      for (let x = 0; x < original.width; x++) {
+        const a = original.get(x, y)
+        const b = copy.get(x, y)
+        if (a === null) {
+          expect(b).toBeNull()
+        } else {
+          expect(b).not.toBeNull()
+          expect(b!.type).toBe(a.type)
+          expect(b!.facing).toBe(a.facing)
+        }
+      }
+    }
+  })
+
+  it('clone is independent of the original (mutating clone leaves original unchanged)', () => {
+    const original = new GridComposite(3, 3)
+    original.set(1, 1, Type.IRON)
+
+    const copy = original.clone()
+    copy.set(0, 0, Type.ROCK)
+    copy.clear(1, 1)
+
+    // Original retains its IRON cell and has no ROCK at (0,0)
+    expect(original.get(1, 1)!.type).toBe(Type.IRON)
+    expect(original.get(0, 0)).toBeNull()
+
+    // Mutating the original after cloning does not affect the clone either.
+    original.set(2, 2, Type.FUEL)
+    expect(copy.get(2, 2)).toBeNull()
+  })
 })

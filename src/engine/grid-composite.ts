@@ -139,6 +139,11 @@ export class GridComposite {
     return { width: this.width, height: this.height, cells }
   }
 
+  /** Clone this grid via toJSON/fromJSON round-trip. Independent copy. */
+  clone(): GridComposite {
+    return GridComposite.fromJSON(this.toJSON())
+  }
+
   /** Deserialize from JSON */
   static fromJSON(data: unknown): GridComposite {
     const d = data as GridJSON
