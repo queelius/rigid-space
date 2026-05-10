@@ -91,6 +91,46 @@ export function spawnInitialWorld(ctx: GameContext): void {
 }
 
 /**
+ * Replace ctx.ship in place: despawn current ship, then spawn a new one with
+ * the given grid at (position.x, position.y) with the given rotation and zero
+ * velocity. The renderer is notified via onBodyRemoved (old ship) followed by
+ * onBodyAdded (new ship). Used by BuilderState's save flow.
+ *
+ * No-op if ctx.ship is undefined (nothing to despawn AND we have no ship to
+ * replace; caller should be using spawnInitialWorld instead).
+ */
+export function respawnShip(
+  ctx: GameContext,
+  newGrid: GridComposite,
+  position: { x: number; y: number },
+  rotation: number,
+): void {
+  // Despawn current ship (if any).
+  if (ctx.ship) {
+    const id = ctx.ship.registryId
+    ctx.renderer.onBodyRemoved(id)
+    ctx.registry.remove(ctx.rapierWorld, id)
+    ctx.ship = undefined
+  }
+
+  // Spawn new ship with the edited grid at the original transform, velocity zero.
+  const cellScale = 10
+  const shipSpawned = spawnComposite(
+    ctx.rapierWorld, newGrid, position.x, position.y, 0, 0, cellScale,
+    {
+      linearDamping: ctx.config.gameplay.ship.linear_damping,
+      angularDamping: ctx.config.gameplay.ship.angular_damping,
+      enableCollisionEvents: true,
+    },
+  )
+  shipSpawned.body.setRotation(rotation, true)
+
+  const id = ctx.registry.add('ship', shipSpawned)
+  ctx.ship = new Ship(id, shipSpawned, ctx.config.gameplay.ship)
+  ctx.renderer.onBodyAdded(ctx.registry.get(id)!)
+}
+
+/**
  * Tear down the playable scene: remove every body from Rapier and the registry,
  * silence continuous audio, reset camera. Caller is responsible for pushing MainMenu.
  */
