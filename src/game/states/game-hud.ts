@@ -13,6 +13,7 @@ export interface GameHUDViewModel {
 
 export interface GameHUDCallbacks {
   onPause: () => void
+  onBuild: () => void
 }
 
 export class GameHUD implements ScreenState {
@@ -42,6 +43,10 @@ export class GameHUD implements ScreenState {
     }
     if (key === 'm') {
       this.minimap.toggle()
+      return true
+    }
+    if (key === 'b') {
+      this.callbacks.onBuild()
       return true
     }
     return false

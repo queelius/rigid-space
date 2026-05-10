@@ -4,11 +4,13 @@ import { Minimap } from '../../render/minimap'
 
 describe('GameHUD', () => {
   let onPause: ReturnType<typeof vi.fn<() => void>>
+  let onBuild: ReturnType<typeof vi.fn<() => void>>
   let viewModel: GameHUDViewModel
   let hud: GameHUD
 
   beforeEach(() => {
     onPause = vi.fn()
+    onBuild = vi.fn()
     viewModel = {
       bodyCount: () => 22,
       shipSpeed: () => 100,
@@ -17,7 +19,7 @@ describe('GameHUD', () => {
       shipRotation: () => 0,
       bodies: () => [],
     }
-    hud = new GameHUD(viewModel, { onPause })
+    hud = new GameHUD(viewModel, { onPause, onBuild })
   })
 
   it('has pausesPhysics false', () => {
@@ -33,6 +35,12 @@ describe('GameHUD', () => {
     expect(hud.handleKey('w')).toBe(false)
     expect(hud.handleKey('a')).toBe(false)
     expect(hud.handleKey('enter')).toBe(false)
+    expect(onPause).not.toHaveBeenCalled()
+  })
+
+  it('B key invokes onBuild and returns true', () => {
+    expect(hud.handleKey('b')).toBe(true)
+    expect(onBuild).toHaveBeenCalledOnce()
     expect(onPause).not.toHaveBeenCalled()
   })
 
@@ -67,7 +75,7 @@ describe('GameHUD', () => {
 
   it('M key toggles minimap visibility', () => {
     const minimap = new Minimap()
-    const localHud = new GameHUD(viewModel, { onPause }, minimap)
+    const localHud = new GameHUD(viewModel, { onPause, onBuild }, minimap)
     expect(minimap.visible).toBe(true)
     expect(localHud.handleKey('m')).toBe(true)
     expect(minimap.visible).toBe(false)
@@ -78,7 +86,7 @@ describe('GameHUD', () => {
   it('render delegates to minimap', () => {
     const minimap = new Minimap()
     const renderSpy = vi.spyOn(minimap, 'render')
-    const localHud = new GameHUD(viewModel, { onPause }, minimap)
+    const localHud = new GameHUD(viewModel, { onPause, onBuild }, minimap)
 
     const fakeCtx = {
       fillStyle: '',
