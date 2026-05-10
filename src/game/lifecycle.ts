@@ -142,7 +142,8 @@ export function respawnShip(
 
 /**
  * Tear down the playable scene: remove every body from Rapier and the registry,
- * silence continuous audio, reset camera. Caller is responsible for pushing MainMenu.
+ * silence continuous audio, reset camera, clear combat projectiles/flashes.
+ * Caller is responsible for pushing MainMenu.
  */
 export function despawnAll(ctx: GameContext): void {
   ctx.soundEngine?.setContinuous('thrust', false)
@@ -153,6 +154,7 @@ export function despawnAll(ctx: GameContext): void {
   }
   // Drain any pending collision events so they don't leak into the next session.
   ctx.eventQueue.drainCollisionEvents(() => {})
+  ctx.combat?.reset()
   ctx.ship = undefined
   ctx.camera.x = 0
   ctx.camera.y = 0

@@ -57,6 +57,7 @@ describe('lifecycle', () => {
       events: new EventBus(),
       config, renderer: makeMockRenderer(), camera,
       soundEngine: null as never,
+      combat: { reset: vi.fn() } as unknown as GameContext['combat'],
     }
   })
 
@@ -243,5 +244,13 @@ describe('lifecycle', () => {
     expect(onBodyRemoved).toHaveBeenCalledWith(asteroidId)
     expect(ctx.registry.get(asteroidId)).toBeUndefined()
     expect(ctx.registry.all().length).toBe(beforeCount - 1)
+  })
+
+  it('despawnAll calls combat.reset()', () => {
+    spawnInitialWorld(ctx)
+    const reset = (ctx.combat.reset as unknown) as ReturnType<typeof vi.fn>
+    expect(reset).toHaveBeenCalledTimes(0)
+    despawnAll(ctx)
+    expect(reset).toHaveBeenCalledTimes(1)
   })
 })

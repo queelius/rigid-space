@@ -19,6 +19,7 @@ import { GameHUD } from './game/states/game-hud'
 import { PauseMenu } from './game/states/pause-menu'
 import { BuilderState } from './game/states/builder'
 import { Builder } from './game/builder'
+import { Combat } from './game/combat'
 import { Minimap } from './render/minimap'
 import type { GameContext } from './game/game-context'
 
@@ -45,6 +46,9 @@ async function main(): Promise<void> {
   app.stage.addChildAt(starGfx, 0)
   const starField = new StarField()
 
+  const renderer = new SpriteBodyRenderer(app)
+  const combat = new Combat(renderer.getWorldContainer())
+
   const ctx: GameContext = {
     app,
     hudCanvas,
@@ -56,9 +60,10 @@ async function main(): Promise<void> {
     screenStack: new ScreenStack(),
     events: new EventBus(),
     config,
-    renderer: new SpriteBodyRenderer(app),
+    renderer,
     camera: new Camera(),
     soundEngine: new SoundEngine(),  // not init'd yet; init runs on user gesture
+    combat,
   }
 
   // Shared Builder instance: paletteIndex and selectedType persist across
@@ -134,6 +139,7 @@ async function main(): Promise<void> {
       onStart: () => {
         ctx.soundEngine.init(ctx.config.sounds)
         ctx.soundEngine.subscribeTo(ctx.events)
+        ctx.combat.subscribeTo(ctx)
         ctx.screenStack.pop()
         enterPlaying()
       },
@@ -168,6 +174,7 @@ async function main(): Promise<void> {
     const onFirstKey = (): void => {
       ctx.soundEngine.init(ctx.config.sounds)
       ctx.soundEngine.subscribeTo(ctx.events)
+      ctx.combat.subscribeTo(ctx)
       window.removeEventListener('keydown', onFirstKey)
     }
     window.addEventListener('keydown', onFirstKey)
@@ -184,6 +191,10 @@ async function main(): Promise<void> {
 
         if (ctx.ship) {
           ctx.ship.applyControls(ctx.input)
+          ctx.ship.tickCooldown(dt)
+          if (ctx.input.isAction('fire_cannon')) {
+            ctx.combat.tryFireFromShip(ctx)
+          }
           applyGravity(ctx.registry, config.gameplay.physics.gravity_constant, 'star')
           ctx.rapierWorld.step(ctx.eventQueue)
           drainCollisionEvents(
@@ -191,6 +202,7 @@ async function main(): Promise<void> {
             ctx.events, config.gameplay.collision.event_threshold,
           )
           ctx.ship.clampSpeed()
+          ctx.combat.update(ctx, dt)
           updateAudio(ctx)
         }
       }

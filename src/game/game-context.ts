@@ -9,6 +9,7 @@ import type { GameConfig } from '../config/loader'
 import type { BodyRenderer } from '../render/body-renderer'
 import type { Camera } from './camera'
 import type { SoundEngine } from './sound'
+import type { Combat } from './combat'
 
 export interface GameContext {
   app: Application
@@ -24,4 +25,5 @@ export interface GameContext {
   renderer: BodyRenderer
   camera: Camera
   soundEngine: SoundEngine
+  combat: Combat
 }
