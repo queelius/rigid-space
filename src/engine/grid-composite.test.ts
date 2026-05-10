@@ -117,6 +117,19 @@ describe('GridComposite', () => {
     }
   })
 
+  it('clone preserves per-cell color overrides', () => {
+    const g = new GridComposite(3, 3)
+    g.set(1, 1, Type.ROCK)
+    // Set a per-cell color override via initColors and direct write.
+    g.initColors()
+    g.colors![1 * 3 + 1] = 0xff00ff
+    const cloned = g.clone()
+    expect(cloned.getCellColor(1, 1)).toBe(0xff00ff)
+    // Mutating the clone's colors does not affect the original.
+    cloned.colors![1 * 3 + 1] = 0x00ff00
+    expect(g.getCellColor(1, 1)).toBe(0xff00ff)
+  })
+
   it('clone is independent of the original (mutating clone leaves original unchanged)', () => {
     const original = new GridComposite(3, 3)
     original.set(1, 1, Type.IRON)

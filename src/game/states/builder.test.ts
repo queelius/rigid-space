@@ -76,18 +76,18 @@ describe('BuilderState', () => {
 
   it('[ and ] cycle paletteIndex (wrapping)', () => {
     const n = PALETTE_TYPES.length
-    state.paletteIndex = 0
+    builder.paletteIndex = 0
     state.handleKey('[')
     // Wraps to last.
-    expect(state.paletteIndex).toBe(n - 1)
+    expect(builder.paletteIndex).toBe(n - 1)
     state.handleKey(']')
-    expect(state.paletteIndex).toBe(0)
+    expect(builder.paletteIndex).toBe(0)
     state.handleKey(']')
-    expect(state.paletteIndex).toBe(1)
+    expect(builder.paletteIndex).toBe(1)
   })
 
   it('palette change updates builder.selectedType', () => {
-    state.paletteIndex = 0
+    builder.paletteIndex = 0
     state.handleKey(']')
     expect(builder.selectedType).toBe(PALETTE_TYPES[1])
     state.handleKey('[')
@@ -98,7 +98,7 @@ describe('BuilderState', () => {
     state.cursorX = 4
     state.cursorY = 6
     // Choose a known palette index so we know what was placed.
-    state.paletteIndex = 0
+    builder.paletteIndex = 0
     builder.selectType(PALETTE_TYPES[0])
     expect(builder.grid.get(4, 6)).toBeNull()
     state.handleKey(' ')
@@ -133,10 +133,30 @@ describe('BuilderState', () => {
     expect(state.cursorY).toBeLessThanOrEqual(builder.grid.height - 1)
   })
 
-  it('enter calls onSave with builder.getGrid()', () => {
+  it('enter calls onSave with builder.getGrid() when grid has cells', () => {
+    // Place a cell so the grid is non-empty.
+    builder.grid.set(4, 6, Type.IRON)
     state.handleKey('enter')
     expect(onSave).toHaveBeenCalledOnce()
     expect(onSave).toHaveBeenCalledWith(builder.getGrid())
+  })
+
+  it('enter does not call onSave when grid is empty', () => {
+    // Default grid from makeBuilder is empty; no cells placed.
+    state.handleKey('enter')
+    expect(onSave).not.toHaveBeenCalled()
+  })
+
+  it('paletteIndex persists across BuilderState constructions on the same Builder', () => {
+    const state1 = new BuilderState(builder, { onSave: vi.fn(), onCancel: vi.fn() })
+    state1.handleKey(']')
+    state1.handleKey(']')
+    // builder.paletteIndex is now 2
+    const state2 = new BuilderState(builder, { onSave: vi.fn(), onCancel: vi.fn() })
+    expect(builder.paletteIndex).toBe(2)
+    expect(builder.selectedType).toBe(PALETTE_TYPES[2])
+    // state2 reference ensures no unused-var warning.
+    expect(state2.name).toBe('builder')
   })
 
   it('escape calls onCancel', () => {

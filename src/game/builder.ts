@@ -69,6 +69,8 @@ export class Builder {
   grid: GridComposite
   selectedType: Type = Type.IRON
   selectedFacing: Direction = Direction.UP
+  /** Persists palette selection across BuilderState sessions; written by BuilderState's [/] handlers. */
+  paletteIndex = 0
   inventory: Map<number, number> = new Map()
 
   /** Stashed ship grid when switching to CREATE mode */

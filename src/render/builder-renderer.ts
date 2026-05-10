@@ -104,7 +104,7 @@ export function drawBuilderGrid(
     for (let gx = 0; gx < cols; gx++) {
       const cell = grid.get(gx, gy)
       if (!cell) continue
-      const color = TYPE_COLORS[cell.type] ?? 0xffffff
+      const color = grid.getCellColor(gx, gy) ?? TYPE_COLORS[cell.type] ?? 0xffffff
       const px = gridX + gx * cellPx
       // Y-flip: gy=0 is at the bottom of the editor (matches body grid convention).
       const py = gridY + (rows - 1 - gy) * cellPx
@@ -196,5 +196,5 @@ export function drawBuilderChrome(
   c2d.font = '14px monospace'
   c2d.textAlign = 'center'
   c2d.fillText('Arrows: move cursor    [/]: select type    Space: place    X: remove', w / 2, h - 38)
-  c2d.fillText('+/-: resize grid    Enter: save    Esc: cancel', w / 2, h - 18)
+  c2d.fillText('+: grow / -: shrink (drops edges)    Enter: save    Esc: cancel', w / 2, h - 18)
 }

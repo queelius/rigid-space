@@ -31,7 +31,6 @@ export class BuilderState implements ScreenState {
 
   cursorX = 0
   cursorY = 0
-  paletteIndex = 0
 
   private builder: Builder
   private callbacks: BuilderStateCallbacks
@@ -42,9 +41,8 @@ export class BuilderState implements ScreenState {
     // Start cursor at grid center.
     this.cursorX = Math.floor(builder.grid.width / 2)
     this.cursorY = Math.floor(builder.grid.height / 2)
-    // Sync builder's selectedType with current paletteIndex so the first
-    // place action uses the visible palette selection.
-    this.builder.selectType(PALETTE_TYPES[this.paletteIndex])
+    // Sync builder.selectedType to whatever paletteIndex is (in case selectedType drifted).
+    builder.selectType(PALETTE_TYPES[builder.paletteIndex])
   }
 
   update(_dt: number): void {}
@@ -88,14 +86,14 @@ export class BuilderState implements ScreenState {
         return true
       case '[': {
         const n = PALETTE_TYPES.length
-        this.paletteIndex = (this.paletteIndex + n - 1) % n
-        this.builder.selectType(PALETTE_TYPES[this.paletteIndex])
+        this.builder.paletteIndex = (this.builder.paletteIndex + n - 1) % n
+        this.builder.selectType(PALETTE_TYPES[this.builder.paletteIndex])
         return true
       }
       case ']': {
         const n = PALETTE_TYPES.length
-        this.paletteIndex = (this.paletteIndex + 1) % n
-        this.builder.selectType(PALETTE_TYPES[this.paletteIndex])
+        this.builder.paletteIndex = (this.builder.paletteIndex + 1) % n
+        this.builder.selectType(PALETTE_TYPES[this.builder.paletteIndex])
         return true
       }
       case ' ':
@@ -115,6 +113,10 @@ export class BuilderState implements ScreenState {
         this.clampCursor()
         return true
       case 'enter':
+        if (!this.builder.hasAnyCells()) {
+          // Refuse: a zero-cell ship would be a massless ghost. No-op silently.
+          return true
+        }
         this.callbacks.onSave(this.builder.getGrid())
         return true
       case 'escape':
@@ -129,7 +131,7 @@ export class BuilderState implements ScreenState {
     drawBuilderChrome(c2d, w, h)
     const layout = computeBuilderLayout(w, h, this.builder.grid.width, this.builder.grid.height)
     drawBuilderGrid(c2d, layout, this.builder, this.cursorX, this.cursorY)
-    drawBuilderPalette(c2d, layout, this.paletteIndex)
+    drawBuilderPalette(c2d, layout, this.builder.paletteIndex)
     drawBuilderStats(c2d, layout, this.builder)
   }
 }

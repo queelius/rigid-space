@@ -139,9 +139,14 @@ export class GridComposite {
     return { width: this.width, height: this.height, cells }
   }
 
-  /** Clone this grid via toJSON/fromJSON round-trip. Independent copy. */
+  /** Clone this grid. Produces an independent copy including per-cell color overrides. */
   clone(): GridComposite {
-    return GridComposite.fromJSON(this.toJSON())
+    const c = GridComposite.fromJSON(this.toJSON())
+    // Preserve per-cell color overrides if any.
+    if (this.colors) {
+      c.colors = new Uint32Array(this.colors)
+    }
+    return c
   }
 
   /** Deserialize from JSON */

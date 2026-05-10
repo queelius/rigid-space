@@ -205,6 +205,7 @@ describe('lifecycle', () => {
     const v = ctx.ship!.spawned.body.linvel()
     expect(v.x).toBeCloseTo(0, 5)
     expect(v.y).toBeCloseTo(0, 5)
+    expect(ctx.ship!.spawned.body.angvel()).toBeCloseTo(0, 5)
   })
 
   it('respawnShip notifies renderer (onBodyRemoved + onBodyAdded)', () => {
