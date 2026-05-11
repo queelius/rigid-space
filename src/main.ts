@@ -160,9 +160,11 @@ async function main(): Promise<void> {
   window.addEventListener('keyup', e => ctx.input.handleKeyUp(e))
 
   // Camera shake on ship-involved collisions.
+  // Skip projectile-on-ship (self-shots): no damage, so no shake.
   ctx.events.on('COLLISION', e => {
     const tags = Array.isArray(e.tags) ? (e.tags as Array<string | undefined>) : undefined
     if (!tags?.includes('ship')) return
+    if (tags.includes('projectile')) return
     ctx.camera.shake(Math.min((e.energy as number) / 500, 1.0))
   })
 
@@ -189,20 +191,25 @@ async function main(): Promise<void> {
         if (ctx.input.isAction('zoom_in')) ctx.camera.zoomBy(Math.pow(2, dt))
         if (ctx.input.isAction('zoom_out')) ctx.camera.zoomBy(Math.pow(0.5, dt))
 
+        // Physics, collision, and combat run regardless of whether the ship
+        // exists. In-flight projectiles must continue to age and despawn even
+        // if ctx.ship is undefined (e.g. after ship destruction or mid-session
+        // state transitions).
+        applyGravity(ctx.registry, config.gameplay.physics.gravity_constant, 'star')
+        ctx.rapierWorld.step(ctx.eventQueue)
+        drainCollisionEvents(
+          ctx.rapierWorld, ctx.eventQueue, ctx.registry,
+          ctx.events, config.gameplay.collision.event_threshold,
+        )
+        ctx.combat.update(ctx, dt)
+
         if (ctx.ship) {
           ctx.ship.applyControls(ctx.input)
           ctx.ship.tickCooldown(dt)
           if (ctx.input.isAction('fire_cannon')) {
             ctx.combat.tryFireFromShip(ctx)
           }
-          applyGravity(ctx.registry, config.gameplay.physics.gravity_constant, 'star')
-          ctx.rapierWorld.step(ctx.eventQueue)
-          drainCollisionEvents(
-            ctx.rapierWorld, ctx.eventQueue, ctx.registry,
-            ctx.events, config.gameplay.collision.event_threshold,
-          )
           ctx.ship.clampSpeed()
-          ctx.combat.update(ctx, dt)
           updateAudio(ctx)
         }
       }

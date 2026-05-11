@@ -177,6 +177,10 @@ export class Combat {
 
           // Despawn the body when its last cell is gone.
           if (!hasAnyCells(otherEntry.spawned.grid)) {
+            // If the other body was also a projectile, clean up its spawn-time
+            // entry so combat.update does not later try to despawn an already-
+            // removed body.
+            this.projectileSpawnTimes.delete(otherId)
             despawnBody(ctx, otherId)
           }
         }

@@ -278,7 +278,51 @@ describe('Combat', () => {
     expect(ctx.renderer.onBodyRemoved).toHaveBeenCalledWith(projId)
   })
 
-  it('10. reset clears projectile state and flashes', () => {
+  it('10. projectile-vs-projectile despawns both and cleans projectile spawn times', () => {
+    // Fire two projectiles via the public API so both IDs are seeded in
+    // combat's projectileSpawnTimes map.
+    spawnShip()
+    ctx.ship!.cannonCooldown = 0
+    combat.tryFireFromShip(ctx)
+    ctx.ship!.cannonCooldown = 0
+    combat.tryFireFromShip(ctx)
+
+    const projectiles = registry.getByTag('projectile')
+    expect(projectiles).toHaveLength(2)
+    const [p1, p2] = projectiles
+
+    // Tick forward slightly to confirm both are alive before the collision.
+    combat.update(ctx, 0.1)
+    expect(registry.get(p1.id)).toBeDefined()
+    expect(registry.get(p2.id)).toBeDefined()
+
+    // Synthesize a projectile-vs-projectile collision. handleCollision treats
+    // slot 0 as the "firing" projectile and slot 1 as the "other" body. Because
+    // the other tag is 'projectile' (not 'ship'), it attempts cell removal on p2.
+    // p2 is a 1x1 body, so removing its only cell triggers despawnBody(p2.id).
+    // The fix must also delete p2.id from projectileSpawnTimes at that point.
+    combat.handleCollision(ctx, {
+      type: 'COLLISION',
+      x: 0, y: 0,
+      energy: 50,
+      tags: ['projectile', 'projectile'],
+      ids: [p1.id, p2.id],
+    })
+
+    // Both projectiles must be gone from the registry.
+    expect(registry.get(p1.id)).toBeUndefined()
+    expect(registry.get(p2.id)).toBeUndefined()
+
+    // After the collision, a combat.update past the lifetime must not attempt to
+    // re-despawn already-removed bodies (no leaked map entry). Confirm by
+    // checking that onBodyRemoved is not called again after the collision.
+    const onBodyRemoved = ctx.renderer.onBodyRemoved as ReturnType<typeof vi.fn>
+    const callsBefore = onBodyRemoved.mock.calls.length
+    combat.update(ctx, 3.5)  // well past the 3.0 s lifetime
+    expect(onBodyRemoved.mock.calls.length).toBe(callsBefore)
+  })
+
+  it('11. reset clears projectile state and flashes', () => {
     spawnShip()
     expect(combat.tryFireFromShip(ctx)).toBe(true)
     // Trigger a flash via a synthetic projectile collision.

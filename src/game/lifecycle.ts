@@ -154,7 +154,7 @@ export function despawnAll(ctx: GameContext): void {
   }
   // Drain any pending collision events so they don't leak into the next session.
   ctx.eventQueue.drainCollisionEvents(() => {})
-  ctx.combat?.reset()
+  ctx.combat.reset()
   ctx.ship = undefined
   ctx.camera.x = 0
   ctx.camera.y = 0
